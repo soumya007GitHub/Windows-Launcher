@@ -1,6 +1,6 @@
 <div align="center">
 
-# Metro Launcher
+# <img src="docs/icon.svg" width="40" align="center" alt="Windows icon"/> Metro Launcher
 
 **A Windows Phone 8 style home screen for Android, written in Kotlin and Jetpack Compose.**
 
@@ -12,6 +12,9 @@ the WP8.1 volume panel, and the search / start / back bar on every screen.
 ![Jetpack Compose](https://img.shields.io/badge/Jetpack%20Compose-foundation-4285F4?logo=jetpackcompose&logoColor=white)
 ![minSdk](https://img.shields.io/badge/minSdk-26-informational)
 ![targetSdk](https://img.shields.io/badge/targetSdk-36-informational)
+
+
+<a href="https://github.com/soumya007GitHub/Windows-Launcher/releases/latest/download/MetroLauncher.apk"><img src="https://img.shields.io/badge/Download-APK-0078D7?style=for-the-badge&logo=android&logoColor=white" alt="Download APK"/></a>
 
 </div>
 
@@ -94,6 +97,10 @@ All of these are optional and can be granted from **Settings → system** inside
 > ```bash
 > adb shell pm grant dev.metro.launcher android.permission.WRITE_SECURE_SETTINGS
 > ```
+
+## Download
+
+Get the latest **[MetroLauncher.apk](https://github.com/soumya007GitHub/Windows-Launcher/releases/latest/download/MetroLauncher.apk)** from the [Releases](https://github.com/soumya007GitHub/Windows-Launcher/releases) page. Open it on your phone, allow *install unknown apps* when asked, then press **Home** and choose **Metro**.
 
 ## Build and install
 
