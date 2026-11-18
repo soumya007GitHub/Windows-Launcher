@@ -1,6 +1,6 @@
 <div align="center">
 
-# <img src="docs/icon.svg" width="40" align="center" alt="Windows icon"/> Metro Launcher
+# <img src="docs/logo.png" width="40" valign="middle" alt="Windows icon" /> Metro Launcher
 
 **A Windows Phone 8 style home screen for Android, written in Kotlin and Jetpack Compose.**
 
