@@ -25,7 +25,7 @@ the WP8.1 volume panel, and the search / start / back bar on every screen.
 <table>
   <tr>
     <td align="center"><img src="docs/screenshots/start.jpg" width="240" alt="Start screen with transparent tiles"/><br/><sub><b>Start</b>: transparent tiles</sub></td>
-    <td align="center"><img src="docs/screenshots/all-apps.png" width="240" alt="All apps list"/><br/><sub><b>All apps</b>: letter groups</sub></td>
+    <td align="center"><img src="docs/screenshots/all-apps.jpg" width="240" alt="All apps list"/><br/><sub><b>All apps</b>: letter groups</sub></td>
     <td align="center"><img src="docs/screenshots/lockscreen.jpg" width="240" alt="Curtain lock screen"/><br/><sub><b>Lock screen</b>: curtain</sub></td>
   </tr>
   <tr>
