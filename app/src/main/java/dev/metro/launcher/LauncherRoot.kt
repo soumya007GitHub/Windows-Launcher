@@ -272,7 +272,14 @@ fun MetroLauncherApp(homeIntents: HomeIntents) {
         if (runCatching(action).isFailure) t.play(TurnstileMode.BackwardIn)
     }
 
-    fun launchApp(app: AppEntry) = launchFrom(app.key) { repo.launch(app) }
+    fun launchApp(app: AppEntry) {
+        // One-tap "screen off" apps: lock immediately, no turnstile and no app window.
+        if (app.packageName in SCREEN_OFF_PACKAGES) {
+            if (!MetroAccessibilityService.lockScreenNow()) runCatching { repo.launchInstantly(app) }
+            return
+        }
+        launchFrom(app.key) { repo.launch(app) }
+    }
 
     fun openSettingsIntent(intent: Intent) {
         runCatching { context.startActivity(intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
@@ -586,3 +593,7 @@ fun MetroLauncherApp(homeIntents: HomeIntents) {
 private fun overlaySettingsIntent(context: Context): Intent =
     Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:${context.packageName}"))
 
+/** Apps whose only job is to turn the screen off; tapping them locks instantly with no animation. */
+private val SCREEN_OFF_PACKAGES = setOf(
+    "com.android.bbk.lockscreen3", // vivo / OriginOS one-tap lock screen
+)

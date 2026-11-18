@@ -135,6 +135,12 @@ class AppRepository private constructor(context: Context) {
         launcherApps.startMainActivity(app.component, app.user, sourceBounds, options)
     }
 
+    /** Starts the app with no window animation at all (used for one-tap screen-off apps). */
+    fun launchInstantly(app: AppEntry) {
+        val options = ActivityOptions.makeCustomAnimation(appContext, 0, 0).toBundle()
+        launcherApps.startMainActivity(app.component, app.user, null, options)
+    }
+
     fun openAppInfo(app: AppEntry) {
         launcherApps.startAppDetailsActivity(app.component, app.user, null, null)
     }

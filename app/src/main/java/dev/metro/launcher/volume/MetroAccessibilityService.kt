@@ -57,6 +57,7 @@ class MetroAccessibilityService : AccessibilityService() {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
 
     override fun onServiceConnected() {
+        running = this
         volume = VolumeOverlay(this)
         navBar = GlobalNavBar(this)
         refreshNavBar()
@@ -112,6 +113,7 @@ class MetroAccessibilityService : AccessibilityService() {
     override fun onInterrupt() = Unit
 
     override fun onDestroy() {
+        if (running === this) running = null
         scope.cancel()
         volume?.release()
         navBar?.release()
@@ -122,6 +124,15 @@ class MetroAccessibilityService : AccessibilityService() {
 
     companion object {
         private const val REPEAT_STEP_MS = 120L
+
+        @Volatile
+        private var running: MetroAccessibilityService? = null
+
+        /** Turns the screen off and locks right away (Android 9+, needs the service running). */
+        fun lockScreenNow(): Boolean {
+            if (android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.P) return false
+            return running?.performGlobalAction(GLOBAL_ACTION_LOCK_SCREEN) == true
+        }
 
         fun isEnabled(context: Context): Boolean {
             val enabled = Settings.Secure.getString(context.contentResolver, Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES)
