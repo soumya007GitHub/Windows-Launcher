@@ -1,0 +1,23 @@
+# Gradle / build output
+.gradle/
+.kotlin/
+build/
+*/build/
+captures/
+*.apk
+*.aab
+
+# Local machine config (contains the local SDK path)
+local.properties
+
+# IDE
+.idea/
+*.iml
+.vscode/
+.DS_Store
+
+# Signing keys and secrets — never commit
+*.jks
+*.keystore
+keystore.properties
+*.p12

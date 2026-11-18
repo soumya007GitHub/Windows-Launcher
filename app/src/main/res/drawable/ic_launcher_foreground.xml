@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Metro launcher icon: a four-pane window in perspective (Windows 8 style), centred in the 72dp safe zone. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M33.84,41.52 L51.38,37.97 L51.38,53.2 L33.84,53.38 Z M33.84,54.62 L51.38,54.8 L51.38,70.03 L33.84,66.48 Z M53.4,37.56 L74.16,33.36 L74.16,52.97 L53.4,53.18 Z M53.4,54.82 L74.16,55.03 L74.16,74.64 L53.4,70.44 Z" />
+</vector>

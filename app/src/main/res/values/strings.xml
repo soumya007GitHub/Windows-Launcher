@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Metro</string>
+    <string name="notification_listener_label">Metro live tiles</string>
+    <string name="accessibility_label">Metro</string>
+    <string name="accessibility_description">Shows the Metro search / start / back bar in every app and the Windows Phone volume panel. Metro listens to the volume keys and notes which app is in front (to hide the bar on the lock screen). It does not read anything on your screen.</string>
+</resources>

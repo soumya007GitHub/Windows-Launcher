@@ -1,0 +1,147 @@
+<div align="center">
+
+# Metro Launcher
+
+**A Windows Phone 8 style home screen for Android, written in Kotlin and Jetpack Compose.**
+
+Live tiles that tilt and flip, turnstile page transitions, a curtain lock screen with real physics,
+the WP8.1 volume panel, and the search / start / back bar on every screen.
+
+![Android](https://img.shields.io/badge/Android-8.0%2B-3DDC84?logo=android&logoColor=white)
+![Kotlin](https://img.shields.io/badge/Kotlin-2.1-7F52FF?logo=kotlin&logoColor=white)
+![Jetpack Compose](https://img.shields.io/badge/Jetpack%20Compose-foundation-4285F4?logo=jetpackcompose&logoColor=white)
+![minSdk](https://img.shields.io/badge/minSdk-26-informational)
+![targetSdk](https://img.shields.io/badge/targetSdk-36-informational)
+
+</div>
+
+---
+
+## Screenshots
+
+<table>
+  <tr>
+    <td align="center"><img src="docs/screenshots/start.jpg" width="240" alt="Start screen with transparent tiles"/><br/><sub><b>Start</b>: transparent tiles</sub></td>
+    <td align="center"><img src="docs/screenshots/all-apps.png" width="240" alt="All apps list"/><br/><sub><b>All apps</b>: letter groups</sub></td>
+    <td align="center"><img src="docs/screenshots/lockscreen.jpg" width="240" alt="Curtain lock screen"/><br/><sub><b>Lock screen</b>: curtain</sub></td>
+  </tr>
+  <tr>
+    <td align="center"><img src="docs/screenshots/recents.jpg" width="240" alt="Recent apps switcher"/><br/><sub><b>Recents</b>: hold Back</sub></td>
+    <td align="center"><img src="docs/screenshots/settings-theme.png" width="240" alt="Theme settings"/><br/><sub><b>Settings</b>: theme pivot</sub></td>
+    <td align="center"><img src="docs/screenshots/settings-start.png" width="240" alt="Start settings"/><br/><sub><b>Settings</b>: start pivot</sub></td>
+  </tr>
+</table>
+
+## Features
+
+### Start screen
+- **Live tiles** in small (1×1), medium (2×2) and wide (4×2) sizes on a 4- or 6-column grid.
+- **Tile tilt**: tiles press in toward the point you touch, like on Windows Phone.
+- **Live tile flip**: tiles show notification counts and previews and flip between faces.
+- **Edit mode**: long-press a tile to drag it, resize it, unpin it or change its icon.
+- **Transparent tiles**: each tile shows its part of a photo you choose, so the whole Start screen looks like one picture.
+- **Arrange my Start**: builds a tidy layout from the apps you use most.
+- **Icons**: white Metro glyphs taken from each app's monochrome icon, full-size artwork for apps without one, any installed icon pack, or a custom image for each tile.
+
+### Navigation
+- **Turnstile transitions** between Start, the app list and settings.
+- **All apps** is one swipe to the right, with letter groups and a context menu that flips in.
+- **Search / Start / Back bar** on every screen, including inside other apps (uses the accessibility service).
+- **Recents**: hold Back to see recently used apps as cards. Swipe a card up to close it, or tap **close all**.
+
+### Lock screen
+- **Curtain lock screen**: pull it up to unlock. It follows your finger, falls back with gravity and bounces.
+- **Separate lock screen photo**, or the same photo as the Start screen.
+- **Lock and unlock sounds**: built-in sounds or your own audio files, loaded in advance so they play instantly.
+- **Swipe-up gate**: on a phone with no PIN, nothing can be used until the curtain is lifted.
+
+### System
+- **WP8.1 volume panel**: Ringer, Notifications and Media sliders, silent-mode toggle and a link to sound settings.
+- **Themes**: dark, light or *same as phone*, with 20 Windows Phone accent colours.
+- **Pivot settings**: theme, start, sounds, system and about pages, with list pickers.
+
+## Requirements
+
+| | Minimum | Recommended |
+|---|---|---|
+| **Android version** | Android 8.0 Oreo (API 26) | Android 10 or newer |
+| **Screen** | Phone, about 4.5" / 360 dp wide (720p) | 6"+ phone, 1080p |
+| **Orientation** | Portrait (built for portrait phones) | Portrait |
+| **RAM** | 2 GB | 4 GB+ for smooth transparent tiles |
+| **Build tools** | JDK 17, Android SDK 36 | Android Studio (latest stable) |
+
+Layouts use density-independent units and tile sizes are worked out from the screen width, so the
+launcher fits most phone screens. Tablets and foldables work, but the layout is designed for
+portrait phones.
+
+### Permissions
+
+All of these are optional and can be granted from **Settings → system** inside the launcher.
+
+| Permission | Used for |
+|---|---|
+| Default home app | Opening Metro when you press Home |
+| Notification access | Live tile counts and previews, and lock screen counts |
+| Usage access | The recent apps switcher |
+| Display over other apps | The curtain lock screen |
+| Accessibility service ("Metro") | The nav bar inside other apps, and the volume panel |
+| `WRITE_SECURE_SETTINGS` *(adb, optional)* | Turning the accessibility service back on if the system switches it off |
+
+> **Note for Vivo / OriginOS, MIUI, ColorOS and similar systems:** these systems often switch off
+> accessibility services and stop background apps. Allow Metro to run in the background, and
+> optionally grant the permission below so the launcher can turn its service back on:
+>
+> ```bash
+> adb shell pm grant dev.metro.launcher android.permission.WRITE_SECURE_SETTINGS
+> ```
+
+## Build and install
+
+```bash
+git clone https://github.com/soumya007GitHub/Windows-Launcher.git
+cd Windows-Launcher
+
+# Release build (smooth scrolling; signed with your local debug key for personal use)
+./gradlew :app:assembleRelease          # Windows: .\gradlew.bat :app:assembleRelease
+
+adb install -r app/build/outputs/apk/release/app-release.apk
+```
+
+Then press **Home** and choose **Metro** as the default home app, or open **Settings → system** in
+the launcher and tap *make Metro your home screen*.
+
+> Use the **release** build for daily use. Debug builds of Compose apps are much slower when scrolling.
+> Before publishing an APK, set up your own release signing key in `app/build.gradle.kts`.
+
+## Project structure
+
+```
+app/src/main/java/dev/metro/launcher/
+├── physics/        Tilt, turnstile, spring and live tile flip (Modifier.Node based)
+├── start/          Start grid, tile faces, edit mode, icon picker, "arrange my Start"
+├── allapps/        App list with letter groups and the animated context menu
+├── lock/           Curtain lock screen, lock service, swipe-up gate
+├── recents/        Recent apps switcher (based on usage stats)
+├── volume/         Accessibility service, WP8.1 volume panel, service keeper
+├── nav/            Search / Start / Back bar (inside the launcher and over other apps)
+├── notifications/  NotificationListenerService that feeds the live tiles
+├── settings/       Pivot settings pages
+├── sound/          Lock / unlock sounds (decoded once, played instantly)
+├── apps/           App list, Metro glyphs, icon artwork, icon packs
+├── data/           Saved settings, tile layout and photos
+└── ui/             Theme (dark / light / system), accent colours, shared controls
+```
+
+**Tech:** Kotlin 2.1 · Jetpack Compose (foundation only, no Material) · AGP 8.9 · Gradle 8.13 ·
+coroutines · `LauncherApps` · `AccessibilityService` · `NotificationListenerService` · `UsageStatsManager`.
+
+## Author
+
+Created by **[soumya007github](https://github.com/soumya007github)**.
+
+## Disclaimer
+
+This is an independent fan project. It is not affiliated with or endorsed by Microsoft.
+Windows and Windows Phone are trademarks of Microsoft Corporation. No Microsoft code, icons or
+sounds are included in this repository. Lock and unlock sounds are synthesised by the app or
+supplied by the user.
