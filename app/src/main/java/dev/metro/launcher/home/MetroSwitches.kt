@@ -27,6 +27,7 @@ object MetroSwitches {
     private const val KEY_SAVED_LOCK = "saved_lockscreen"
     private const val KEY_SAVED_BAR = "saved_bar"
     private const val KEY_SAVED_VOLUME = "saved_volume"
+    private const val KEY_SAVED_ACTION_CENTER = "saved_action_center"
     private const val KEY_PREVIOUS_IME = "previous_ime"
 
     private fun prefs(context: Context) = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
@@ -51,8 +52,9 @@ object MetroSwitches {
             .putBoolean(KEY_SAVED_LOCK, s.lockscreenEnabled)
             .putBoolean(KEY_SAVED_BAR, s.globalNavBar)
             .putBoolean(KEY_SAVED_VOLUME, s.volumePanel)
+            .putBoolean(KEY_SAVED_ACTION_CENTER, s.actionCenter)
             .apply()
-        store.updateSettings { it.copy(lockscreenEnabled = false, globalNavBar = false, volumePanel = false) }
+        store.updateSettings { it.copy(lockscreenEnabled = false, globalNavBar = false, volumePanel = false, actionCenter = false) }
         LockscreenService.stop(context)
         setAccessibility(context, false)
         setNotificationListener(context, false)
@@ -70,12 +72,13 @@ object MetroSwitches {
                     lockscreenEnabled = p.getBoolean(KEY_SAVED_LOCK, true),
                     globalNavBar = p.getBoolean(KEY_SAVED_BAR, true),
                     volumePanel = p.getBoolean(KEY_SAVED_VOLUME, true),
+                    actionCenter = p.getBoolean(KEY_SAVED_ACTION_CENTER, true),
                 )
             }
         }
         val s = store.settings.value
         if (s.lockscreenEnabled) LockscreenService.start(context)
-        if (s.globalNavBar || s.volumePanel) setAccessibility(context, true)
+        if (s.globalNavBar || s.volumePanel || s.actionCenter) setAccessibility(context, true)
         setNotificationListener(context, true)
     }
 

@@ -1,3 +1,5 @@
+@file:OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
+
 package dev.metro.launcher.start
 
 import android.os.SystemClock
@@ -36,6 +38,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBars
+import androidx.compose.foundation.layout.statusBarsIgnoringVisibility
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
@@ -257,7 +260,7 @@ fun StartScreen(
             Modifier
                 .fillMaxSize()
                 // Outside the scroll: tiles clip below Android's status bar instead of sliding under it.
-                .windowInsetsPadding(WindowInsets.statusBars)
+                .windowInsetsPadding(WindowInsets.statusBarsIgnoringVisibility)
                 .onGloballyPositioned {
                     val b = it.boundsInRoot()
                     viewport[0] = b.top

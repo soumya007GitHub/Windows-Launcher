@@ -295,7 +295,7 @@ fun MetroLauncherApp(homeIntents: HomeIntents) {
 
     /** The accessibility service runs only while the Metro bar or the volume panel needs it. */
     fun syncAccessibility(globalNavBar: Boolean, volumePanel: Boolean) {
-        val wanted = globalNavBar || volumePanel
+        val wanted = globalNavBar || volumePanel || store.settings.value.actionCenter
         if (wanted != MetroAccessibilityService.isEnabled(context)) {
             if (!MetroSwitches.setAccessibility(context, wanted) && wanted) {
                 openSettingsIntent(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))

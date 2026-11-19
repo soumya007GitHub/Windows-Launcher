@@ -1,3 +1,5 @@
+@file:OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
+
 package dev.metro.launcher.allapps
 
 import androidx.activity.compose.BackHandler
@@ -25,6 +27,7 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBars
+import androidx.compose.foundation.layout.statusBarsIgnoringVisibility
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyColumn
@@ -158,7 +161,7 @@ fun AllAppsScreen(
             animationSpec = tween(220, easing = ExponentialEaseOut(4f)),
             label = "recede",
         )
-        Column(Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.statusBars)) {
+        Column(Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.statusBarsIgnoringVisibility)) {
         // Fixed header: WP-style round back button returns to Start.
         Box(
             contentAlignment = Alignment.Center,
@@ -315,7 +318,7 @@ fun AllAppsScreen(
                     .fillMaxSize()
                     .background(LocalMetroColors.current.background.copy(alpha = 0.94f))
                     .verticalScroll(rememberScrollState())
-                    .windowInsetsPadding(WindowInsets.statusBars)
+                    .windowInsetsPadding(WindowInsets.statusBarsIgnoringVisibility)
                     .padding(16.dp),
             ) {
                 JUMP_LETTERS.toList().chunked(4).forEach { line ->

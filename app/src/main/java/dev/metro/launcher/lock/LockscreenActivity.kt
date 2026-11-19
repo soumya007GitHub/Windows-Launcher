@@ -32,6 +32,11 @@ import androidx.core.view.WindowInsetsControllerCompat
 class LockscreenActivity : ComponentActivity() {
 
     private val curtain = CurtainState()
+
+    override fun onStart() {
+        super.onStart()
+        current = this
+    }
     private var keyguardLocked by mutableStateOf(false)
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -50,6 +55,10 @@ class LockscreenActivity : ComponentActivity() {
         WindowCompat.getInsetsController(window, window.decorView).apply {
             systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
             hide(WindowInsetsCompat.Type.navigationBars())
+            // With Metro's WP status bar on, it is drawn over the curtain instead of Android's.
+            if (dev.metro.launcher.data.LauncherStore.get(this@LockscreenActivity).settings.value.wpStatusBar) {
+                hide(WindowInsetsCompat.Type.statusBars())
+            }
         }
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
             overrideActivityTransition(OVERRIDE_TRANSITION_OPEN, 0, 0)
@@ -154,7 +163,18 @@ class LockscreenActivity : ComponentActivity() {
         }
     }
 
-    private companion object {
-        const val REASSERT_DELAY_MS = 250L
+    companion object {
+        private const val REASSERT_DELAY_MS = 250L
+
+        @Volatile
+        private var current: LockscreenActivity? = null
+
+        /** Start on the Metro bar while the curtain is down: lift it (Back and Search do nothing). */
+        fun liftFromNavBar(): Boolean {
+            val activity = current ?: return false
+            if (activity.isFinishing || activity.isDestroyed) return false
+            activity.runOnUiThread { activity.curtain.liftRequests++ }
+            return true
+        }
     }
 }

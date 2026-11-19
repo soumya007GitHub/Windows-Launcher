@@ -1,3 +1,5 @@
+@file:OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
+
 package dev.metro.launcher.lock
 
 import android.text.format.DateFormat
@@ -17,6 +19,7 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBars
+import androidx.compose.foundation.layout.navigationBarsIgnoringVisibility
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -75,6 +78,9 @@ class CurtainState {
         internal set
 
     internal var job: Job? = null
+
+    /** Bumped by the Metro bar's Start button: lift the curtain as if flicked up. */
+    var liftRequests by androidx.compose.runtime.mutableIntStateOf(0)
 
     /** Drops the curtain back to closed instantly (shown again, or PIN prompt cancelled). */
     fun reset() {
@@ -155,6 +161,10 @@ fun CurtainLockscreen(
                 else -> fall(velocity) // a slow upward release keeps rising briefly, then falls
             }
         }
+    }
+
+    androidx.compose.runtime.LaunchedEffect(state.liftRequests) {
+        if (state.liftRequests > 0) release(-dp(MetroMotion.CURTAIN_FLING_DP) * 2f)
     }
 
     Box(
@@ -247,7 +257,7 @@ private fun LockFace() {
         Column(
             Modifier
                 .align(Alignment.BottomStart)
-                .windowInsetsPadding(WindowInsets.navigationBars)
+                .windowInsetsPadding(WindowInsets.navigationBarsIgnoringVisibility)
                 .padding(start = 24.dp, end = 24.dp, bottom = 56.dp),
         ) {
             BasicText(

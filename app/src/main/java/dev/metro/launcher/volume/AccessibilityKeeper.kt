@@ -23,7 +23,7 @@ object AccessibilityKeeper {
     fun ensure(context: Context): Boolean {
         if (MetroAccessibilityService.isEnabled(context)) return true
         val settings = LauncherStore.get(context).settings.value
-        if (!settings.globalNavBar && !settings.volumePanel) return false
+        if (!settings.globalNavBar && !settings.volumePanel && !settings.actionCenter && !settings.wpStatusBar) return false
         if (!canSelfEnable(context)) return false
         return runCatching {
             val resolver = context.contentResolver

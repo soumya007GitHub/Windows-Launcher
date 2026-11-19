@@ -61,15 +61,17 @@ class MetroAccessibilityService : AccessibilityService() {
     @Volatile
     private var foregroundPackage: String? = null
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
+    private var actionCenter: dev.metro.launcher.actioncenter.ActionCenter? = null
 
     override fun onServiceConnected() {
         running = this
         volume = VolumeOverlay(this) { foregroundPackage }
         navBar = GlobalNavBar(this)
+        actionCenter = dev.metro.launcher.actioncenter.ActionCenter(this)
         refreshNavBar()
         scope.launch {
             LauncherStore.get(this@MetroAccessibilityService).settings
-                .map { it.globalNavBar }
+                .map { Triple(it.globalNavBar, it.actionCenter, it.wpStatusBar) }
                 .distinctUntilChanged()
                 .collect { refreshNavBar() }
         }
@@ -78,7 +80,14 @@ class MetroAccessibilityService : AccessibilityService() {
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
         if (event?.eventType != AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) return
         val className = event.className?.toString() ?: return
-        trackForeground(event.packageName?.toString(), className)
+        // Something else came to the front (an app opened, Home, the lock curtain): close the Action Center.
+        val pkg = event.packageName?.toString()
+        if (actionCenter?.isOpen == true && pkg != null && pkg != "com.android.systemui" &&
+            (pkg != packageName || className.startsWith(packageName))
+        ) {
+            actionCenter?.onOtherWindow()
+        }
+        trackForeground(pkg, className)
         curtainInFront = event.packageName == packageName && className == LockscreenActivity::class.java.name
         refreshNavBar()
     }
@@ -103,7 +112,9 @@ class MetroAccessibilityService : AccessibilityService() {
 
     private fun refreshNavBar() {
         val keyguardLocked = getSystemService(KeyguardManager::class.java).isKeyguardLocked
-        navBar?.update(suppressed = curtainInFront || keyguardLocked)
+        navBar?.update(locked = curtainInFront || keyguardLocked)
+        // Never over the lock screen: notification text must not show while the phone is locked.
+        actionCenter?.update(suppressed = curtainInFront || keyguardLocked)
     }
 
     override fun onKeyEvent(event: KeyEvent): Boolean {
@@ -146,6 +157,8 @@ class MetroAccessibilityService : AccessibilityService() {
         scope.cancel()
         volume?.release()
         navBar?.release()
+        actionCenter?.release()
+        actionCenter = null
         volume = null
         navBar = null
         super.onDestroy()

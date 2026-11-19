@@ -5,6 +5,14 @@
     <!-- Phase 3 lockscreen curtain: overlay window + the foreground service that hosts the
          dynamically-registered ACTION_SCREEN_OFF receiver (it cannot be manifest-registered). -->
     <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
+    <!-- Action Center quick actions: show Wi-Fi / Bluetooth state, flashlight, rotation lock, brightness. -->
+    <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
+    <uses-permission android:name="android.permission.BLUETOOTH" android:maxSdkVersion="30" />
+    <!-- Optional, asked from Settings > notifications: Wi-Fi network name and connected Bluetooth device on the tiles. -->
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
+    <uses-permission android:name="android.permission.WRITE_SETTINGS" tools:ignore="ProtectedPermissions" />
     <!-- Settings > about > check for updates: reads the public GitHub release and downloads its APK. -->
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />

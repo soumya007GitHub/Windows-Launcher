@@ -40,11 +40,16 @@ class GlobalNavBar(private val service: AccessibilityService) {
     private var owner: OverlayLifecycleOwner? = null
     private var currentHeight = 0
 
-    /** Shows, resizes or hides the bar. [suppressed] = something that must not be covered (the lock curtain). */
-    fun update(suppressed: Boolean) {
+    /** True while the lock curtain / keyguard is in front: Start lifts the curtain, the rest do nothing. */
+    @Volatile
+    private var locked = false
+
+    /** Shows, resizes or hides the bar. Over the lock screen it stays, with lock-safe buttons. */
+    fun update(locked: Boolean) {
+        this.locked = locked
         val enabled = LauncherStore.get(service).settings.value.globalNavBar
         val height = barHeightPx()
-        if (!enabled || suppressed || height == null) {
+        if (!enabled || height == null) {
             remove()
             return
         }
@@ -78,10 +83,13 @@ class GlobalNavBar(private val service: AccessibilityService) {
                 CompositionLocalProvider(LocalMetroColors provides MetroColors.of(settings.theme, isSystemInDarkTheme())) {
                 MetroNavBar(
                     accent = settings.accent.color,
-                    onBack = { service.performGlobalAction(AccessibilityService.GLOBAL_ACTION_BACK) },
-                    onBackLongPress = { openMetro(ACTION_SWITCHER) },
-                    onStart = { service.performGlobalAction(AccessibilityService.GLOBAL_ACTION_HOME) },
-                    onSearch = { openMetro(ACTION_SEARCH) },
+                    onBack = { if (!locked) service.performGlobalAction(AccessibilityService.GLOBAL_ACTION_BACK) },
+                    onBackLongPress = { if (!locked) openMetro(ACTION_SWITCHER) },
+                    onStart = {
+                        if (!locked) service.performGlobalAction(AccessibilityService.GLOBAL_ACTION_HOME)
+                        else dev.metro.launcher.lock.LockscreenActivity.liftFromNavBar()
+                    },
+                    onSearch = { if (!locked) openMetro(ACTION_SEARCH) },
                     height = (heightPx / service.resources.displayMetrics.density).dp,
                     modifier = Modifier.fillMaxSize(),
                 )

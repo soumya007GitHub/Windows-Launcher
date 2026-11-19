@@ -60,6 +60,13 @@ the WP8.1 volume panel, and the search / start / back bar on every screen.
 - **Metro notification icons**: each app with notifications shows its white glyph and a count.
 - **Lock and unlock sounds**: built-in sounds or your own audio files, loaded in advance so they play instantly.
 - **Swipe-up gate**: on a phone with no PIN, nothing can be used until the curtain is lifted.
+- **Status bar and navigation bar on the lock screen**: the WP status bar sits transparently over the photo (no notification icons), and tapping Start on the bar lifts the curtain.
+
+### Action Center and status bar
+- **Windows Phone 8.1 Action Center**: swipe down from the top edge. A short pull shows the quick actions; a longer pull shows your notifications, grouped by app, with **clear all**.
+- **Quick actions**: four wide tiles with Metro icons and live labels (your Wi-Fi network, Bluetooth device or carrier). **Expand** shows every other tile. Choose the four from the same tiles your phone's own quick settings offer.
+- **Brightness slider** with an **auto** switch.
+- **Windows Phone status bar** in every app: signal, Wi-Fi, Bluetooth, quiet hours, white notification icons, battery and time.
 
 ### Keyboard
 - **Metro keyboard**: a Windows Phone style keyboard with flat keys that light up in your accent colour.
@@ -69,7 +76,7 @@ the WP8.1 volume panel, and the search / start / back bar on every screen.
 ### System
 - **WP8.1 volume panel**: Ringer, Notifications and Media sliders, silent-mode toggle and a link to sound settings.
 - **Themes**: dark, light or *same as phone*, with 20 Windows Phone accent colours.
-- **Pivot settings**: theme, start, sounds, system and about pages, with list pickers.
+- **Pivot settings**: theme, start, sounds, notifications, system and about pages, with list pickers.
 - **On/off switches** for the Metro home screen, keyboard, Metro bar and volume panel. Switching the home screen off returns you to Android's launcher and turns Metro's features off; switching it on brings them back.
 - **Updates**: *Settings → about → check for updates* finds the newest release on GitHub, downloads it and installs it, with the Windows Phone loading dots while it works.
 - Launcher screens stay in **portrait**, even with auto-rotate on.
@@ -101,6 +108,8 @@ All of these are optional and can be granted from **Settings → system** inside
 | Accessibility service ("Metro") | The nav bar inside other apps, and the volume panel |
 | Metro keyboard *(optional)* | Typing with the Windows Phone style keyboard |
 | Internet and *install unknown apps* | Checking for, downloading and installing updates from GitHub |
+| Modify system settings *(optional)* | Brightness slider, auto brightness and rotation lock in the Action Center |
+| Location and nearby devices *(optional)* | Showing your Wi-Fi network and Bluetooth device names on the Action Center tiles |
 | `WRITE_SECURE_SETTINGS` *(adb, optional)* | Turning the accessibility service back on if the system switches it off, and the one-tap on/off switches |
 
 > **Note for Vivo / OriginOS, MIUI, ColorOS and similar systems:** these systems often switch off
@@ -149,6 +158,7 @@ app/src/main/java/dev/metro/launcher/
 ├── notifications/  NotificationListenerService that feeds the live tiles
 ├── settings/       Pivot settings pages and the update section
 ├── keyboard/       Metro keyboard (input method service, letters, symbols, emoji)
+├── actioncenter/   WP 8.1 Action Center, quick actions and the WP status bar
 ├── update/         Update check, download and install from GitHub Releases
 ├── wallpapers/     Built-in wallpapers and the gallery strip
 ├── home/           Home role, on/off switches

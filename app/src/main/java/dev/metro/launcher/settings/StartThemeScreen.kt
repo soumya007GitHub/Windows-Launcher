@@ -1,3 +1,5 @@
+@file:OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
+
 package dev.metro.launcher.settings
 
 import androidx.compose.foundation.background
@@ -18,6 +20,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBars
+import androidx.compose.foundation.layout.statusBarsIgnoringVisibility
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.pager.HorizontalPager
@@ -53,7 +56,7 @@ import dev.metro.launcher.ui.isDark
 import kotlinx.coroutines.launch
 
 /** Pivot sections, in WP order. */
-private val Sections = listOf("theme", "start", "sounds", "system", "about")
+private val Sections = listOf("theme", "start", "sounds", "notifications", "system", "about")
 
 /**
  * WP8 settings as a Pivot: "SETTINGS" on top, large section headings that you swipe through
@@ -109,7 +112,7 @@ fun StartThemeScreen(
     Column(
         Modifier
             .fillMaxSize()
-            .windowInsetsPadding(WindowInsets.statusBars)
+            .windowInsetsPadding(WindowInsets.statusBarsIgnoringVisibility)
             .padding(top = 20.dp),
     ) {
         BasicText(
@@ -139,6 +142,7 @@ fun StartThemeScreen(
                         onPickLockSound, onPickUnlockSound, onResetSounds, onLockscreen, onPreviewLockscreen,
                         hasLockPhoto, onPickLockPhoto, onClearLockPhoto,
                     )
+                    "notifications" -> NotificationsPage(settings, accent, turnstile)
                     "system" -> SystemPage(
                         settings, accent, turnstile, isDefaultHome, notificationAccess, usageAccess, overlayGranted, volumeServiceOn,
                         onGlobalNavBar, onVolumePanel, onHideNavigation, onSetDefaultHome, onNotificationAccess, onUsageAccess,
@@ -421,6 +425,37 @@ private fun SystemPage(
     PermissionRow("Recent apps (hold Back)", usageAccess, "allow usage access", accent, turnstile, onUsageAccess)
     PermissionRow("Lockscreen", overlayGranted, "allow display over other apps", accent, turnstile, onOverlayPermission)
     PermissionRow("Metro bar & volume panel", volumeServiceOn, "turn on \"Metro\" in Accessibility", accent, turnstile, onAccessibilitySettings)
+}
+
+/** WP8.1 Action Center on / off; runs in the Metro accessibility service, switched on when needed. */
+@Composable
+internal fun ActionCenterToggle(on: Boolean, accent: Color, turnstile: TurnstileState) {
+    val context = LocalContext.current
+    MetroToggle(
+        title = "Action center",
+        subtitle = "swipe down from the top edge for quick actions and notifications",
+        checked = on,
+        accent = accent,
+        onCheckedChange = { wanted ->
+            val store = dev.metro.launcher.data.LauncherStore.get(context)
+            store.updateSettings { it.copy(actionCenter = wanted) }
+            val s = store.settings.value
+            val needsService = s.globalNavBar || s.volumePanel || s.actionCenter
+            val serviceOn = dev.metro.launcher.volume.MetroAccessibilityService.isEnabled(context)
+            if (needsService != serviceOn) {
+                val switched = dev.metro.launcher.home.MetroSwitches.setAccessibility(context, needsService)
+                if (!switched && needsService) {
+                    runCatching {
+                        context.startActivity(
+                            android.content.Intent(android.provider.Settings.ACTION_ACCESSIBILITY_SETTINGS)
+                                .addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK),
+                        )
+                    }
+                }
+            }
+        },
+        modifier = Modifier.turnstileItem(turnstile),
+    )
 }
 
 /** Metro keyboard on / off. Switches directly when Metro may change secure settings, else opens Android's pages. */
