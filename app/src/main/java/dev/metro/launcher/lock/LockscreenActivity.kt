@@ -146,6 +146,8 @@ class LockscreenActivity : ComponentActivity() {
         }
         bypassAttempted = false
         finish()
+        // Bring the Metro bar back over the app underneath now, not when Android sends its next window event.
+        dev.metro.launcher.volume.MetroAccessibilityService.curtainClosed()
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
             @Suppress("DEPRECATION")
             overridePendingTransition(0, 0)

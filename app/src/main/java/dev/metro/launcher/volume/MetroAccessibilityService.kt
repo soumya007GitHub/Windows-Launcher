@@ -89,6 +89,8 @@ class MetroAccessibilityService : AccessibilityService() {
         // Metro's own overlays (volume panel, nav bar) also raise window events; only its
         // activities (Start, lock curtain) count as "Metro is in front".
         if (pkg == packageName && !className.startsWith(packageName)) return
+        // The lock curtain sits over the app the user was in; that app is still "in front" for volume.
+        if (pkg == packageName && className == LockscreenActivity::class.java.name) return
         val ime = Settings.Secure.getString(contentResolver, Settings.Secure.DEFAULT_INPUT_METHOD)
         if (ime != null && ime.startsWith("$pkg/")) return
         foregroundPackage = pkg
@@ -154,6 +156,20 @@ class MetroAccessibilityService : AccessibilityService() {
 
         @Volatile
         private var running: MetroAccessibilityService? = null
+
+        /** Called by the lock curtain the moment it is lifted, so the bar reappears without a gap. */
+        fun curtainClosed() {
+            val service = running ?: return
+            service.curtainInFront = false
+            service.refreshNavBar()
+        }
+
+        /** Switches the running service off (an accessibility service may always disable itself). */
+        fun disableRunning(): Boolean {
+            val service = running ?: return false
+            service.disableSelf()
+            return true
+        }
 
         /** Turns the screen off and locks right away (Android 9+, needs the service running). */
         fun lockScreenNow(): Boolean {

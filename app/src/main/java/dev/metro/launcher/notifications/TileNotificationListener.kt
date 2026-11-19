@@ -77,12 +77,34 @@ object NotificationRepository {
  */
 class TileNotificationListener : NotificationListenerService() {
 
-    override fun onListenerConnected() = refresh()
+    override fun onListenerConnected() {
+        if (!dev.metro.launcher.home.MetroSwitches.isMetroActive(this)) {
+            // Metro is switched off in its settings: stay unbound until it is turned back on.
+            runCatching { requestUnbind() }
+            return
+        }
+        running = this
+        refresh()
+    }
 
     override fun onListenerDisconnected() {
+        if (running === this) running = null
         NotificationRepository.clear()
-        // Ask the system to rebind us (e.g. after the process was killed).
-        requestRebind(ComponentName(this, TileNotificationListener::class.java))
+        // Ask the system to rebind us (e.g. after the process was killed), unless Metro is switched off.
+        if (dev.metro.launcher.home.MetroSwitches.isMetroActive(this)) {
+            requestRebind(ComponentName(this, TileNotificationListener::class.java))
+        }
+    }
+
+    companion object {
+        @Volatile
+        private var running: TileNotificationListener? = null
+
+        /** Stops delivering notifications to Metro (access stays granted, so it can be turned back on). */
+        fun unbindRunning() {
+            running?.let { runCatching { it.requestUnbind() } }
+            NotificationRepository.clear()
+        }
     }
 
     override fun onNotificationPosted(sbn: StatusBarNotification?) = refresh()

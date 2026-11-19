@@ -72,7 +72,7 @@ fun StartThemeScreen(
     onCutout: (Boolean) -> Unit,
     onPickPhoto: () -> Unit,
     onHideNavigation: (Boolean) -> Unit,
-    onSetDefaultHome: () -> Unit,
+    onSetDefaultHome: (Boolean) -> Unit,
     onNotificationAccess: () -> Unit,
     overlayGranted: Boolean,
     onLockscreen: (Boolean) -> Unit,
@@ -369,7 +369,7 @@ private fun SystemPage(
     onGlobalNavBar: (Boolean) -> Unit,
     onVolumePanel: (Boolean) -> Unit,
     onHideNavigation: (Boolean) -> Unit,
-    onSetDefaultHome: () -> Unit,
+    onSetDefaultHome: (Boolean) -> Unit,
     onNotificationAccess: () -> Unit,
     onUsageAccess: () -> Unit,
     onOverlayPermission: () -> Unit,
@@ -399,46 +399,55 @@ private fun SystemPage(
         onCheckedChange = onHideNavigation,
         modifier = Modifier.turnstileItem(turnstile),
     )
+    MetroToggle(
+        title = "Metro home screen",
+        subtitle = if (isDefaultHome) {
+            "off switches back to Android's home screen and turns off Metro's lock screen, bar, volume panel and live tiles"
+        } else {
+            "on makes Metro your home screen again and turns its features back on"
+        },
+        checked = isDefaultHome,
+        accent = accent,
+        onCheckedChange = onSetDefaultHome,
+        modifier = Modifier.turnstileItem(turnstile),
+    )
+    KeyboardToggle(accent, turnstile)
     Spacer(Modifier.height(16.dp))
     BasicText("Permissions", style = MetroType.Subtle, modifier = Modifier.turnstileItem(turnstile))
-    PermissionRow("Home screen", isDefaultHome, "make Metro your home screen", accent, turnstile, onSetDefaultHome)
     PermissionRow("Live tiles", notificationAccess, "allow notification access", accent, turnstile, onNotificationAccess)
     PermissionRow("Recent apps (hold Back)", usageAccess, "allow usage access", accent, turnstile, onUsageAccess)
     PermissionRow("Lockscreen", overlayGranted, "allow display over other apps", accent, turnstile, onOverlayPermission)
     PermissionRow("Metro bar & volume panel", volumeServiceOn, "turn on \"Metro\" in Accessibility", accent, turnstile, onAccessibilitySettings)
-    KeyboardRows(accent, turnstile)
 }
 
-/** Metro keyboard: first turn it on in Android's keyboard list, then pick it as the keyboard in use. */
+/** Metro keyboard on / off. Switches directly when Metro may change secure settings, else opens Android's pages. */
 @Composable
-private fun KeyboardRows(accent: Color, turnstile: TurnstileState) {
+private fun KeyboardToggle(accent: Color, turnstile: TurnstileState) {
     val context = LocalContext.current
     var resumes by remember { androidx.compose.runtime.mutableIntStateOf(0) }
     androidx.lifecycle.compose.LifecycleResumeEffect(Unit) {
         resumes++
         onPauseOrDispose { }
     }
-    val imm = remember { context.getSystemService(android.view.inputmethod.InputMethodManager::class.java) }
-    val enabled = remember(resumes) {
-        imm.enabledInputMethodList.any { it.packageName == context.packageName }
-    }
-    val inUse = remember(resumes) {
-        android.provider.Settings.Secure.getString(context.contentResolver, android.provider.Settings.Secure.DEFAULT_INPUT_METHOD)
-            ?.startsWith(context.packageName + "/") == true
-    }
-    PermissionRow("Metro keyboard", enabled, "turn on \"Metro keyboard\"", accent, turnstile) {
-        runCatching {
-            context.startActivity(
-                android.content.Intent(android.provider.Settings.ACTION_INPUT_METHOD_SETTINGS)
-                    .addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK),
-            )
-        }
-    }
-    if (enabled) {
-        PermissionRow("Keyboard in use", inUse, "switch to Metro keyboard", accent, turnstile) {
-            imm.showInputMethodPicker()
-        }
-    }
+    val on = remember(resumes) { dev.metro.launcher.home.MetroSwitches.isKeyboardOn(context) }
+    MetroToggle(
+        title = "Metro keyboard",
+        subtitle = "Windows Phone keyboard with emoji; off switches back to your previous keyboard",
+        checked = on,
+        accent = accent,
+        onCheckedChange = { wanted ->
+            val switches = dev.metro.launcher.home.MetroSwitches
+            if (switches.setKeyboard(context, wanted)) {
+                resumes++
+            } else if (wanted) {
+                // Android needs the user: turn it on in the keyboard list, then pick it.
+                runCatching { context.startActivity(switches.keyboardSettingsIntent()) }
+            } else {
+                switches.showKeyboardPicker(context)
+            }
+        },
+        modifier = Modifier.turnstileItem(turnstile),
+    )
 }
 
 private const val GITHUB_URL = "https://github.com/soumya007github"
@@ -488,7 +497,6 @@ private fun AboutPage(accent: Color, turnstile: TurnstileState) {
     )
 }
 
-/** "Title" + either a muted "on" or an accent link that opens the system permission page. */
 @Composable
 private fun PermissionRow(
     title: String,

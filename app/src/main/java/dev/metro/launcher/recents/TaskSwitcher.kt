@@ -2,11 +2,11 @@ package dev.metro.launcher.recents
 
 import android.app.ActivityManager
 import android.app.AppOpsManager
+import android.app.usage.UsageEvents
 import android.app.usage.UsageStatsManager
 import android.content.Context
 import android.os.Build
 import android.os.Process
-import android.os.SystemClock
 import android.view.HapticFeedbackConstants
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.core.Animatable
@@ -89,7 +89,6 @@ object RecentApps {
      * within this window. Usage history has no notion of "closed", so a short window is what
      * keeps long-finished apps out.
      */
-    private const val WINDOW_MS = 3 * 60 * 60 * 1000L
 
     private fun prefs(context: Context) = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
 
@@ -121,26 +120,63 @@ object RecentApps {
         packageNames.forEach { runCatching { activityManager.killBackgroundProcesses(it) } }
     }
 
+    private var homeCache: Set<android.content.ComponentName>? = null
+    private val activityCache = HashMap<String, Boolean>()
+
+    /** Home-screen activities (launchers, and system fallbacks such as Settings' FallbackHome). */
+    private fun homeActivities(context: Context): Set<android.content.ComponentName> = homeCache ?: runCatching {
+        val home = android.content.Intent(android.content.Intent.ACTION_MAIN).addCategory(android.content.Intent.CATEGORY_HOME)
+        @Suppress("DEPRECATION")
+        context.packageManager.queryIntentActivities(home, android.content.pm.PackageManager.MATCH_ALL)
+            .map { android.content.ComponentName(it.activityInfo.packageName, it.activityInfo.name) }.toSet()
+    }.getOrDefault(emptySet()).also { homeCache = it }
+
+    /** True if [className] is an activity of the app that Android would list in Recents. */
+    private fun showsInRecents(context: Context, packageName: String, className: String): Boolean {
+        val key = "$packageName/$className"
+        return activityCache.getOrPut(key) {
+            runCatching {
+                @Suppress("DEPRECATION")
+                val info = context.packageManager.getActivityInfo(android.content.ComponentName(packageName, className), 0)
+                info.flags and android.content.pm.ActivityInfo.FLAG_EXCLUDE_FROM_RECENTS == 0
+            }.getOrDefault(false)
+        }
+    }
+
+    /** How far back Recents looks; Android keeps its own list for days, so this is generous. */
+    private const val HISTORY_MS = 3L * 24 * 60 * 60 * 1000
+
+    /**
+     * Android's Recents is the list of app screens that came to the front, newest first. Launchers
+     * can't read it, but usage access gives the same moments: every activity that was resumed,
+     * with its time. Only real app screens count (not launchers, and not screens Android itself
+     * hides from Recents). Cards closed here stay closed until that app is opened again.
+     */
     suspend fun load(context: Context, apps: List<AppEntry>, limit: Int = 12): List<AppEntry> =
         withContext(Dispatchers.IO) {
             if (!hasAccess(context)) return@withContext emptyList()
             val usage = context.getSystemService(UsageStatsManager::class.java)
             val prefs = prefs(context)
             val end = System.currentTimeMillis()
-            val bootedAt = end - SystemClock.elapsedRealtime()
-            val since = maxOf(bootedAt, end - WINDOW_MS, prefs.getLong(KEY_CLEARED_ALL, 0L))
-            // Aggregated per-app stats are one cheap call, unlike walking every usage event.
-            val stats = usage.queryAndAggregateUsageStats(since, end)
-            val lastSeen = HashMap<String, Long>()
-            for ((pkg, stat) in stats) {
-                val time = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) stat.lastTimeVisible else stat.lastTimeUsed
-                // Daily buckets can carry older timestamps: re-check against the window.
-                if (time > since) lastSeen[pkg] = time
+            val since = maxOf(end - HISTORY_MS, prefs.getLong(KEY_CLEARED_ALL, 0L))
+            val homes = homeActivities(context)
+            val lastResumed = HashMap<String, Long>()
+            val events = usage.queryEvents(since, end)
+            val event = UsageEvents.Event()
+            while (events.hasNextEvent()) {
+                events.getNextEvent(event)
+                @Suppress("DEPRECATION") // MOVE_TO_FOREGROUND == ACTIVITY_RESUMED (API 29+)
+                if (event.eventType != UsageEvents.Event.MOVE_TO_FOREGROUND) continue
+                val pkg = event.packageName ?: continue
+                val cls = event.className ?: continue
+                if (pkg == context.packageName) continue
+                if (android.content.ComponentName(pkg, cls) in homes) continue
+                if (!showsInRecents(context, pkg, cls)) continue
+                lastResumed[pkg] = event.timeStamp
             }
             val byPackage = apps.groupBy { it.packageName }
-            lastSeen.entries
+            lastResumed.entries
                 .asSequence()
-                .filter { it.key != context.packageName }
                 .filter { prefs.getLong(KEY_DISMISSED_PREFIX + it.key, 0L) < it.value }
                 .sortedByDescending { it.value }
                 .mapNotNull { byPackage[it.key]?.firstOrNull() }

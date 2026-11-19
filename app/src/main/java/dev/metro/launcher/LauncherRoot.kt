@@ -82,6 +82,7 @@ import dev.metro.launcher.data.LauncherStore
 import dev.metro.launcher.data.PinnedTile
 import dev.metro.launcher.home.DefaultHome
 import dev.metro.launcher.home.HomeIntents
+import dev.metro.launcher.home.MetroSwitches
 import dev.metro.launcher.nav.MetroNavBar
 import dev.metro.launcher.notifications.NotificationRepository
 import dev.metro.launcher.physics.LiveTileEngineEffect
@@ -128,6 +129,7 @@ fun MetroLauncherApp(homeIntents: HomeIntents) {
     val notificationPermission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { }
 
     val scope = rememberCoroutineScope()
+    var metroActive by remember { mutableStateOf(MetroSwitches.isMetroActive(context)) }
     val roleRequest = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) {
         isDefaultHome = DefaultHome.isDefault(context)
     }
@@ -285,6 +287,20 @@ fun MetroLauncherApp(homeIntents: HomeIntents) {
         runCatching { context.startActivity(intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
     }
 
+    /** The accessibility service runs only while the Metro bar or the volume panel needs it. */
+    fun syncAccessibility(globalNavBar: Boolean, volumePanel: Boolean) {
+        val wanted = globalNavBar || volumePanel
+        if (wanted != MetroAccessibilityService.isEnabled(context)) {
+            if (!MetroSwitches.setAccessibility(context, wanted) && wanted) {
+                openSettingsIntent(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
+            }
+        }
+        scope.launch {
+            kotlinx.coroutines.delay(300)
+            volumeServiceOn = MetroAccessibilityService.isEnabled(context)
+        }
+    }
+
     LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
         accessGranted = NotificationRepository.isAccessGranted(context)
         isDefaultHome = DefaultHome.isDefault(context)
@@ -438,7 +454,7 @@ fun MetroLauncherApp(homeIntents: HomeIntents) {
                         settings = settings,
                         turnstile = turnstiles.getValue(Page.Settings),
                         hasBackgroundPhoto = wallpaper != null,
-                        isDefaultHome = isDefaultHome,
+                        isDefaultHome = isDefaultHome && metroActive,
                         notificationAccess = accessGranted,
                         onAccent = { a -> store.updateSettings { it.copy(accent = a) } },
                         onColumns = { c -> store.updateSettings { it.copy(columns = c) } },
@@ -449,7 +465,25 @@ fun MetroLauncherApp(homeIntents: HomeIntents) {
                             }
                         },
                         onHideNavigation = { hide -> store.updateSettings { it.copy(hideSystemNavigation = hide) } },
-                        onSetDefaultHome = { runCatching { roleRequest.launch(DefaultHome.requestIntent(context)) } },
+                        onSetDefaultHome = { on ->
+                            if (on) {
+                                MetroSwitches.activateMetro(context)
+                                metroActive = true
+                                if (!DefaultHome.isDefault(context)) {
+                                    runCatching { roleRequest.launch(DefaultHome.requestIntent(context)) }
+                                }
+                                scope.launch {
+                                    kotlinx.coroutines.delay(300)
+                                    volumeServiceOn = MetroAccessibilityService.isEnabled(context)
+                                }
+                            } else {
+                                MetroSwitches.deactivateMetro(context)
+                                metroActive = false
+                                // Android's chooser: the user picks the phone's own home screen there.
+                                runCatching { context.startActivity(MetroSwitches.homeChooserIntent()) }
+                                    .onFailure { openSettingsIntent(Intent(Settings.ACTION_MANAGE_DEFAULT_APPS_SETTINGS)) }
+                            }
+                        },
                         onNotificationAccess = { openSettingsIntent(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS)) },
                         overlayGranted = overlayGranted,
                         onLockscreen = { on ->
@@ -496,12 +530,12 @@ fun MetroLauncherApp(homeIntents: HomeIntents) {
                         volumeServiceOn = volumeServiceOn,
                         onVolumePanel = { on ->
                             store.updateSettings { it.copy(volumePanel = on) }
-                            if (on && !volumeServiceOn) openSettingsIntent(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
+                            syncAccessibility(globalNavBar = store.settings.value.globalNavBar, volumePanel = on)
                         },
                         onAccessibilitySettings = { openSettingsIntent(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)) },
                         onGlobalNavBar = { on ->
                             store.updateSettings { it.copy(globalNavBar = on) }
-                            if (on && !volumeServiceOn) openSettingsIntent(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
+                            syncAccessibility(globalNavBar = on, volumePanel = store.settings.value.volumePanel)
                         },
                         onLockSounds = { on -> store.updateSettings { it.copy(lockSounds = on) } },
                         customSounds = customSounds,
