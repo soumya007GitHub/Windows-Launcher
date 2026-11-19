@@ -343,25 +343,23 @@ private fun RecentCard(
             ),
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Image(app.icon, contentDescription = null, modifier = Modifier.size(22.dp))
+            // Metro: a small accent square with the white glyph (or the app's artwork), never the coloured icon.
+            dev.metro.launcher.start.AppSquare(app, accent, metroIcons, Modifier.size(24.dp), glyphFraction = 0.72f)
             Spacer(Modifier.width(8.dp))
             BasicText(app.label, style = MetroType.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
         Spacer(Modifier.height(10.dp))
-        Box(
-            contentAlignment = Alignment.Center,
-            modifier = Modifier
+        // The card looks like the app's Start tile: white glyph on the accent colour, or full artwork.
+        dev.metro.launcher.start.AppSquare(
+            app,
+            accent,
+            metroIcons,
+            Modifier
                 .fillMaxWidth()
                 .aspectRatio(aspect)
                 .metroTilt()
-                .background(accent)
                 .clickable(noRipple, indication = null, onClick = onOpen),
-        ) {
-            Image(
-                app.tileIcon(metroIcons),
-                contentDescription = app.label,
-                modifier = Modifier.fillMaxHeight(0.22f).aspectRatio(1f),
-            )
-        }
+            glyphFraction = 0.34f,
+        )
     }
 }
