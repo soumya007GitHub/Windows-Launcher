@@ -53,12 +53,18 @@ class MetroAccessibilityService : AccessibilityService() {
     private var volume: VolumeOverlay? = null
     private var navBar: GlobalNavBar? = null
     private var lastStepAt = 0L
+    /** True while a key press is being handed to Android because the Metro change was refused. */
+    private var passThrough = false
     private var curtainInFront = false
+
+    /** Package of the app window in front (from window-change events), used to pick the volume stream. */
+    @Volatile
+    private var foregroundPackage: String? = null
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
 
     override fun onServiceConnected() {
         running = this
-        volume = VolumeOverlay(this)
+        volume = VolumeOverlay(this) { foregroundPackage }
         navBar = GlobalNavBar(this)
         refreshNavBar()
         scope.launch {
@@ -72,8 +78,20 @@ class MetroAccessibilityService : AccessibilityService() {
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
         if (event?.eventType != AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) return
         val className = event.className?.toString() ?: return
+        trackForeground(event.packageName?.toString(), className)
         curtainInFront = event.packageName == packageName && className == LockscreenActivity::class.java.name
         refreshNavBar()
+    }
+
+    /** Ignores the notification shade, keyboards and similar windows that sit over the real app. */
+    private fun trackForeground(pkg: String?, className: String) {
+        if (pkg.isNullOrEmpty() || pkg == "com.android.systemui" || pkg == "android") return
+        // Metro's own overlays (volume panel, nav bar) also raise window events; only its
+        // activities (Start, lock curtain) count as "Metro is in front".
+        if (pkg == packageName && !className.startsWith(packageName)) return
+        val ime = Settings.Secure.getString(contentResolver, Settings.Secure.DEFAULT_INPUT_METHOD)
+        if (ime != null && ime.startsWith("$pkg/")) return
+        foregroundPackage = pkg
     }
 
     override fun onConfigurationChanged(newConfig: Configuration) {
@@ -100,14 +118,23 @@ class MetroAccessibilityService : AccessibilityService() {
             return false
         }
         if (event.action == KeyEvent.ACTION_DOWN) {
+            if (event.repeatCount == 0) passThrough = false
+            if (passThrough) return false
             // Holding a key repeats every ~50 ms; step at a readable pace instead of racing to 0 / 30.
             val isRepeat = event.repeatCount > 0
             if (!isRepeat || event.eventTime - lastStepAt >= REPEAT_STEP_MS) {
                 lastStepAt = event.eventTime
-                volume?.onVolumeKey(up)
+                if (volume?.onVolumeKey(up) == false) {
+                    // Android refused the change: let the key through so the volume still moves
+                    // (Android's own volume dialog shows for this press).
+                    passThrough = true
+                    return false
+                }
             }
+            return true
         }
-        return true // consume both down and up so Android's own dialog never appears
+        // Key up: match whatever the key down did.
+        return !passThrough
     }
 
     override fun onInterrupt() = Unit
@@ -144,7 +171,10 @@ class MetroAccessibilityService : AccessibilityService() {
 }
 
 /** Hosts [VolumePanel] in an accessibility overlay window at the top of the screen. */
-private class VolumeOverlay(private val service: AccessibilityService) {
+private class VolumeOverlay(
+    private val service: AccessibilityService,
+    private val foregroundPackage: () -> String?,
+) {
 
     private val windowManager = service.getSystemService(WindowManager::class.java)
     private val audio = service.getSystemService(AudioManager::class.java)
@@ -160,13 +190,53 @@ private class VolumeOverlay(private val service: AccessibilityService) {
     }
     private val detach = Runnable { removeWindow() }
 
-    fun onVolumeKey(up: Boolean) {
-        val stream = if (audio.isMusicActive) AudioManager.STREAM_MUSIC else AudioManager.STREAM_RING
+    /** Steps the volume for the current context and shows the panel. Always handles the key. */
+    fun onVolumeKey(up: Boolean): Boolean {
+        val stream = streamForContext()
         state.primary = stream
-        val current = VolumeScale.level(audio, stream)
-        VolumeScale.setLevel(audio, stream, current + if (up) 1 else -1)
+        if (stream == AudioManager.STREAM_MUSIC) {
+            // Step media exactly like apps do (one Android step per press). Raising also un-mutes,
+            // and past the safe headphone level Android shows its own warning.
+            val direction = if (up) AudioManager.ADJUST_RAISE else AudioManager.ADJUST_LOWER
+            val pastSafe = up && audio.getStreamVolume(stream) >= SAFE_MEDIA_INDEX_GUESS &&
+                isHeadsetConnected()
+            runCatching {
+                audio.adjustStreamVolume(stream, direction, if (pastSafe) AudioManager.FLAG_SHOW_UI else 0)
+            }
+        } else {
+            VolumeScale.setLevel(audio, stream, VolumeScale.level(audio, stream) + if (up) 1 else -1)
+        }
         show()
+        // Android applies volume changes asynchronously; re-read once it has.
+        handler.postDelayed({ state.refresh(audio) }, 120)
+        return true
     }
+
+    private fun isHeadsetConnected(): Boolean = runCatching {
+        audio.getDevices(AudioManager.GET_DEVICES_OUTPUTS).any {
+            it.type == android.media.AudioDeviceInfo.TYPE_WIRED_HEADPHONES ||
+                it.type == android.media.AudioDeviceInfo.TYPE_WIRED_HEADSET ||
+                it.type == android.media.AudioDeviceInfo.TYPE_USB_HEADSET
+        }
+    }.getOrDefault(false)
+
+    /**
+     * Which volume the keys control, like Windows Phone / Android:
+     *  - something is playing             -> media;
+     *  - an app is open (YouTube, Instagram, games...), even if paused -> media;
+     *  - on Start / the app list with nothing playing -> ringer.
+     */
+    private fun streamForContext(): Int {
+        if (audio.isMusicActive) return AudioManager.STREAM_MUSIC
+        val pkg = foregroundPackage() ?: return AudioManager.STREAM_RING
+        if (pkg == service.packageName || pkg == homePackage()) return AudioManager.STREAM_RING
+        return AudioManager.STREAM_MUSIC
+    }
+
+    private fun homePackage(): String? = runCatching {
+        val home = android.content.Intent(android.content.Intent.ACTION_MAIN).addCategory(android.content.Intent.CATEGORY_HOME)
+        service.packageManager.resolveActivity(home, 0)?.activityInfo?.packageName
+    }.getOrNull()
 
     private fun show() {
         addWindow()
@@ -199,6 +269,7 @@ private class VolumeOverlay(private val service: AccessibilityService) {
                     onSetLevel = { stream, level ->
                         VolumeScale.setLevel(audio, stream, level)
                         state.refresh(audio)
+                        handler.postDelayed({ state.refresh(audio) }, 120)
                     },
                     onToggleSilent = {
                         val notifications = service.getSystemService(NotificationManager::class.java)
@@ -291,6 +362,8 @@ private class VolumeOverlay(private val service: AccessibilityService) {
     }
 
     private companion object {
+        /** Android's default safe headphone index is about 60 % of max; above it a warning may be needed. */
+        const val SAFE_MEDIA_INDEX_GUESS = 9
         const val HIDE_AFTER_MS = 3_000L
     }
 }

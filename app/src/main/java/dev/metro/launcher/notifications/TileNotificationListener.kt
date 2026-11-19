@@ -18,6 +18,8 @@ data class NotificationPreview(
     val postedAt: Long,
     /** Number of active, user-visible notifications for the package (tile badge). */
     val count: Int,
+    /** The app's monochrome status-bar icon (drawn white on the lock screen, Metro style). */
+    val smallIcon: android.graphics.drawable.Icon? = null,
 )
 
 /** Process-wide, in-memory store of the latest preview per package. */
@@ -53,6 +55,7 @@ object NotificationRepository {
                 text = text.take(MAX_TEXT_CHARS),
                 postedAt = latest.postTime,
                 count = list.size,
+                smallIcon = latest.notification.smallIcon,
             )
         }.filterValues { it.title.isNotBlank() || it.text.isNotBlank() }
     }

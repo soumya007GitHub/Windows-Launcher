@@ -37,6 +37,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.graphics.graphicsLayer
@@ -262,8 +264,17 @@ private fun LockFace() {
                     .take(5)
                     .forEach { preview ->
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            val icon = iconsByPackage[preview.packageName]
-                            if (icon != null) Image(icon, contentDescription = null, modifier = Modifier.size(24.dp))
+                            val glyph = remember(preview.smallIcon) { preview.smallIcon?.let { loadGlyph(context, it) } }
+                            val icon = glyph ?: iconsByPackage[preview.packageName]
+                            if (icon != null) {
+                                Image(
+                                    icon,
+                                    contentDescription = null,
+                                    // Metro: every app as a plain white glyph, never a coloured icon.
+                                    colorFilter = ColorFilter.tint(Color.White),
+                                    modifier = Modifier.size(24.dp),
+                                )
+                            }
                             Spacer(Modifier.width(6.dp))
                             BasicText(
                                 preview.count.toString(),
@@ -275,3 +286,15 @@ private fun LockFace() {
         }
     }
 }
+
+/** Renders an app's status-bar icon (already a monochrome silhouette) to a bitmap; null if it can't load. */
+private fun loadGlyph(context: android.content.Context, icon: android.graphics.drawable.Icon): ImageBitmap? =
+    runCatching {
+        val drawable = icon.loadDrawable(context) ?: return null
+        val size = (24 * context.resources.displayMetrics.density).toInt().coerceAtLeast(1)
+        val bitmap = android.graphics.Bitmap.createBitmap(size, size, android.graphics.Bitmap.Config.ARGB_8888)
+        val canvas = android.graphics.Canvas(bitmap)
+        drawable.setBounds(0, 0, size, size)
+        drawable.draw(canvas)
+        bitmap.asImageBitmap()
+    }.getOrNull()

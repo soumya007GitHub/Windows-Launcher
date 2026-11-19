@@ -28,6 +28,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clipToBounds
@@ -405,6 +406,39 @@ private fun SystemPage(
     PermissionRow("Recent apps (hold Back)", usageAccess, "allow usage access", accent, turnstile, onUsageAccess)
     PermissionRow("Lockscreen", overlayGranted, "allow display over other apps", accent, turnstile, onOverlayPermission)
     PermissionRow("Metro bar & volume panel", volumeServiceOn, "turn on \"Metro\" in Accessibility", accent, turnstile, onAccessibilitySettings)
+    KeyboardRows(accent, turnstile)
+}
+
+/** Metro keyboard: first turn it on in Android's keyboard list, then pick it as the keyboard in use. */
+@Composable
+private fun KeyboardRows(accent: Color, turnstile: TurnstileState) {
+    val context = LocalContext.current
+    var resumes by remember { androidx.compose.runtime.mutableIntStateOf(0) }
+    androidx.lifecycle.compose.LifecycleResumeEffect(Unit) {
+        resumes++
+        onPauseOrDispose { }
+    }
+    val imm = remember { context.getSystemService(android.view.inputmethod.InputMethodManager::class.java) }
+    val enabled = remember(resumes) {
+        imm.enabledInputMethodList.any { it.packageName == context.packageName }
+    }
+    val inUse = remember(resumes) {
+        android.provider.Settings.Secure.getString(context.contentResolver, android.provider.Settings.Secure.DEFAULT_INPUT_METHOD)
+            ?.startsWith(context.packageName + "/") == true
+    }
+    PermissionRow("Metro keyboard", enabled, "turn on \"Metro keyboard\"", accent, turnstile) {
+        runCatching {
+            context.startActivity(
+                android.content.Intent(android.provider.Settings.ACTION_INPUT_METHOD_SETTINGS)
+                    .addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK),
+            )
+        }
+    }
+    if (enabled) {
+        PermissionRow("Keyboard in use", inUse, "switch to Metro keyboard", accent, turnstile) {
+            imm.showInputMethodPicker()
+        }
+    }
 }
 
 private const val GITHUB_URL = "https://github.com/soumya007github"

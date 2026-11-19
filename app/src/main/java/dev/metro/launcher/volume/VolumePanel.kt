@@ -74,6 +74,19 @@ object VolumeScale {
         if (index == current && wanted != before) {
             index = (current + if (wanted > before) 1 else -1).coerceIn(0, max)
         }
+        if (stream == AudioManager.STREAM_MUSIC) {
+            // Setting an exact media index is ignored on some phones (OriginOS / Android 16 volume
+            // groups); stepping, as apps do, always works and also un-mutes when raising.
+            val diff = index - current
+            val direction = if (diff > 0) AudioManager.ADJUST_RAISE else AudioManager.ADJUST_LOWER
+            repeat(kotlin.math.abs(diff)) { runCatching { audio.adjustStreamVolume(stream, direction, 0) } }
+            return
+        }
+        // A muted stream ignores setStreamVolume until it is un-muted (e.g. media muted from the
+        // quick settings or by another app), so raising it un-mutes first.
+        if (index > 0 && audio.isStreamMute(stream)) {
+            runCatching { audio.adjustStreamVolume(stream, AudioManager.ADJUST_UNMUTE, 0) }
+        }
         // Ring volume 0 can mean "silent", which Android only lets apps with Do Not Disturb access set.
         runCatching { audio.setStreamVolume(stream, index, 0) }
             .onFailure { runCatching { audio.setStreamVolume(stream, 1.coerceAtMost(max), 0) } }
