@@ -130,8 +130,27 @@ class AppRepository private constructor(context: Context) {
     }
 
     fun launch(app: AppEntry, sourceBounds: Rect? = null) {
-        // The launcher already played its turnstile; the app should just appear.
-        val options = ActivityOptions.makeCustomAnimation(appContext, android.R.anim.fade_in, 0).toBundle()
+        // The launcher already played its turnstile; the app just appears. No system open animation:
+        // OriginOS animates a picture of the app that includes Android's status bar, which would
+        // show under Metro's own bar.
+        val options = ActivityOptions.makeCustomAnimation(appContext, 0, 0).toBundle()
+        if (app.user == android.os.Process.myUserHandle()) {
+            // Same profile: start it ourselves with Android's "no animation" flag, which also stops
+            // OriginOS's zoom-in launch animation.
+            val opened = runCatching {
+                appContext.startActivity(
+                    Intent(Intent.ACTION_MAIN)
+                        .addCategory(Intent.CATEGORY_LAUNCHER)
+                        .setComponent(app.component)
+                        .addFlags(
+                            Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED or
+                                Intent.FLAG_ACTIVITY_NO_ANIMATION,
+                        ),
+                    options,
+                )
+            }.isSuccess
+            if (opened) return
+        }
         launcherApps.startMainActivity(app.component, app.user, sourceBounds, options)
     }
 

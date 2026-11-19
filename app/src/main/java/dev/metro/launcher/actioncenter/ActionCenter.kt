@@ -144,9 +144,9 @@ class ActionCenter(private val service: AccessibilityService) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
             val top = windowManager.currentWindowMetrics.windowInsets
                 .getInsetsIgnoringVisibility(WindowInsets.Type.statusBars()).top
-            return maxOf(top, minimum)
+            return maxOf(top, minimum) + dev.metro.launcher.ui.WpStatusBarSize.extraPx(density)
         }
-        return minimum
+        return minimum + dev.metro.launcher.ui.WpStatusBarSize.extraPx(density)
     }
 
     private var statusBarVisible = true

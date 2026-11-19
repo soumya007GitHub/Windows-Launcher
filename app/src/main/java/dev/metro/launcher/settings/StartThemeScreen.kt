@@ -2,6 +2,7 @@
 
 package dev.metro.launcher.settings
 
+import dev.metro.launcher.ui.statusBarSpace
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -112,7 +113,7 @@ fun StartThemeScreen(
     Column(
         Modifier
             .fillMaxSize()
-            .windowInsetsPadding(WindowInsets.statusBarsIgnoringVisibility)
+            .statusBarSpace()
             .padding(top = 20.dp),
     ) {
         BasicText(

@@ -2,6 +2,7 @@
 
 package dev.metro.launcher.allapps
 
+import dev.metro.launcher.ui.statusBarSpace
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
@@ -161,7 +162,7 @@ fun AllAppsScreen(
             animationSpec = tween(220, easing = ExponentialEaseOut(4f)),
             label = "recede",
         )
-        Column(Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.statusBarsIgnoringVisibility)) {
+        Column(Modifier.fillMaxSize().statusBarSpace()) {
         // Fixed header: WP-style round back button returns to Start.
         Box(
             contentAlignment = Alignment.Center,
@@ -318,7 +319,7 @@ fun AllAppsScreen(
                     .fillMaxSize()
                     .background(LocalMetroColors.current.background.copy(alpha = 0.94f))
                     .verticalScroll(rememberScrollState())
-                    .windowInsetsPadding(WindowInsets.statusBarsIgnoringVisibility)
+                    .statusBarSpace()
                     .padding(16.dp),
             ) {
                 JUMP_LETTERS.toList().chunked(4).forEach { line ->

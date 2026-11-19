@@ -86,7 +86,7 @@ class GlobalNavBar(private val service: AccessibilityService) {
                     onBack = { if (!locked) service.performGlobalAction(AccessibilityService.GLOBAL_ACTION_BACK) },
                     onBackLongPress = { if (!locked) openMetro(ACTION_SWITCHER) },
                     onStart = {
-                        if (!locked) service.performGlobalAction(AccessibilityService.GLOBAL_ACTION_HOME)
+                        if (!locked) goHome()
                         else dev.metro.launcher.lock.LockscreenActivity.liftFromNavBar()
                     },
                     onSearch = { if (!locked) openMetro(ACTION_SEARCH) },
@@ -127,6 +127,25 @@ class GlobalNavBar(private val service: AccessibilityService) {
         view = null
         owner = null
         currentHeight = 0
+    }
+
+    /**
+     * Start: back to Metro's Start screen with no system animation (Android's home animation moves a
+     * picture of the app, Android status bar included, under Metro's bar). Falls back to Home.
+     */
+    private fun goHome() {
+        val opened = runCatching {
+            val home = Intent(Intent.ACTION_MAIN)
+                .addCategory(Intent.CATEGORY_HOME)
+                .setPackage(service.packageName)
+                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_NO_ANIMATION)
+            val options = android.app.ActivityOptions.makeCustomAnimation(service, 0, 0)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+                options.setPendingIntentBackgroundActivityStartMode(android.app.ActivityOptions.MODE_BACKGROUND_ACTIVITY_START_ALLOWED)
+            }
+            service.startActivity(home, options.toBundle())
+        }.isSuccess
+        if (!opened) service.performGlobalAction(AccessibilityService.GLOBAL_ACTION_HOME)
     }
 
     private fun openMetro(action: String) {

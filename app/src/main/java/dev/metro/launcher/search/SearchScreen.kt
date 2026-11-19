@@ -2,6 +2,7 @@
 
 package dev.metro.launcher.search
 
+import dev.metro.launcher.ui.statusBarSpace
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -101,7 +102,7 @@ fun SearchScreen(
     Column(
         Modifier
             .fillMaxSize()
-            .windowInsetsPadding(WindowInsets.statusBarsIgnoringVisibility)
+            .statusBarSpace()
             .imePadding()
             .padding(horizontal = 16.dp),
     ) {

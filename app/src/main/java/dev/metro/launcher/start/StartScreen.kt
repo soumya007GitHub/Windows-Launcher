@@ -2,6 +2,7 @@
 
 package dev.metro.launcher.start
 
+import dev.metro.launcher.ui.statusBarSpace
 import android.os.SystemClock
 import android.view.HapticFeedbackConstants
 import androidx.activity.compose.BackHandler
@@ -260,7 +261,7 @@ fun StartScreen(
             Modifier
                 .fillMaxSize()
                 // Outside the scroll: tiles clip below Android's status bar instead of sliding under it.
-                .windowInsetsPadding(WindowInsets.statusBarsIgnoringVisibility)
+                .statusBarSpace()
                 .onGloballyPositioned {
                     val b = it.boundsInRoot()
                     viewport[0] = b.top

@@ -2,6 +2,7 @@
 
 package dev.metro.launcher.start
 
+import dev.metro.launcher.ui.statusBarSpace
 import android.content.Context
 import android.graphics.BitmapFactory
 import android.util.LruCache
@@ -107,7 +108,7 @@ fun IconPicker(
         Modifier
             .fillMaxSize()
             .background(colors.background)
-            .windowInsetsPadding(WindowInsets.statusBarsIgnoringVisibility)
+            .statusBarSpace()
             .padding(horizontal = 20.dp),
     ) {
         val pack = browsing
