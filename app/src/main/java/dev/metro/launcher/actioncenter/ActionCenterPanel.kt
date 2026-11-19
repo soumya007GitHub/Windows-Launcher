@@ -146,10 +146,18 @@ internal fun ActionCenterPanel(
                     if (old > 0f && kotlin.math.abs(state.revealed - old) < 4f) state.revealed = state.peekPx
                 },
             ) {
-                // Clear of the camera / Android's status band, then WP's two status lines.
-                Spacer(Modifier.height(with(androidx.compose.ui.platform.LocalDensity.current) { state.statusBarPx.toDp() } + 6.dp))
-                StatusArea(quick, c)
-                Spacer(Modifier.height(12.dp))
+                // The same WP status bar as in every app, in exactly the same place, then the carrier.
+                val band = with(androidx.compose.ui.platform.LocalDensity.current) { state.statusBarPx.toDp() }.coerceAtLeast(24.dp)
+                Box(Modifier.fillMaxWidth().height(band)) {
+                    WpStatusBar(quick = quick, notifications = items, ink = c.ink, bed = c.bed, height = band)
+                }
+                BasicText(
+                    quick.carrier() ?: "",
+                    style = TextStyle(color = c.ink, fontSize = 13.sp),
+                    maxLines = 1,
+                    modifier = Modifier.padding(start = 14.dp, end = 14.dp, top = 2.dp),
+                )
+                Spacer(Modifier.height(14.dp))
                 QuickRow(quickActions, quick, accent, c, onQuickAction, onQuickActionSettings)
                 BrightnessRow(quick, accent, c, onNeedsPermission = onBrightnessPermission)
                 if (expanded) {
@@ -199,25 +207,6 @@ internal fun ActionCenterPanel(
 }
 
 // ------------------------------------------------------------------ WP status area
-
-@Composable
-private fun StatusArea(quick: QuickActions, c: AcColors) {
-    val s = rememberStatus(quick)
-    Row(Modifier.fillMaxWidth().height(26.dp).padding(horizontal = 14.dp), verticalAlignment = Alignment.CenterVertically) {
-        Row(Modifier.weight(1f), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-            StatusIcons(s, c.ink)
-        }
-        BatteryWithPercent(s.battery, s.charging, c.ink, c.bed)
-        Spacer(Modifier.width(10.dp))
-        BasicText(s.time, style = TextStyle(color = c.ink, fontSize = 15.sp))
-    }
-    BasicText(
-        s.carrier ?: "",
-        style = TextStyle(color = c.ink, fontSize = 13.sp),
-        maxLines = 1,
-        modifier = Modifier.padding(horizontal = 14.dp, vertical = 2.dp),
-    )
-}
 
 @Composable
 private fun QuickRow(

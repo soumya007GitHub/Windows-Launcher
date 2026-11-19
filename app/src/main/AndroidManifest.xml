@@ -7,6 +7,7 @@
     <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
     <!-- Action Center quick actions: show Wi-Fi / Bluetooth state, flashlight, rotation lock, brightness. -->
     <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.BLUETOOTH" android:maxSdkVersion="30" />
     <!-- Optional, asked from Settings > notifications: Wi-Fi network name and connected Bluetooth device on the tiles. -->
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />

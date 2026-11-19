@@ -398,6 +398,7 @@ private fun SystemPage(
         onCheckedChange = onVolumePanel,
         modifier = Modifier.turnstileItem(turnstile),
     )
+    AppSwitchAnimationToggle(accent, turnstile)
     MetroToggle(
         title = "Hide Android navigation bar",
         subtitle = "on Metro's own screens, when the Metro bar is not running everywhere",
@@ -451,6 +452,49 @@ internal fun ActionCenterToggle(on: Boolean, accent: Color, turnstile: Turnstile
                                 .addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK),
                         )
                     }
+                }
+            }
+        },
+        modifier = Modifier.turnstileItem(turnstile),
+    )
+}
+
+/**
+ * Android's own window / app-switch animations (the "jump" when apps open, close or switch, which
+ * can let Android's status bar show for a moment). Off = both scales set to 0, as in Developer
+ * options. Needs the one-time WRITE_SECURE_SETTINGS grant; otherwise opens Developer options.
+ */
+@Composable
+private fun AppSwitchAnimationToggle(accent: Color, turnstile: TurnstileState) {
+    val context = LocalContext.current
+    var resumes by remember { androidx.compose.runtime.mutableIntStateOf(0) }
+    androidx.lifecycle.compose.LifecycleResumeEffect(Unit) {
+        resumes++
+        onPauseOrDispose { }
+    }
+    val resolver = context.contentResolver
+    val animationsOn = remember(resumes) {
+        android.provider.Settings.Global.getFloat(resolver, android.provider.Settings.Global.TRANSITION_ANIMATION_SCALE, 1f) > 0f
+    }
+    MetroToggle(
+        title = "Android app-switch animations",
+        subtitle = "off removes Android's open / close / switch animation, so apps appear instantly",
+        checked = animationsOn,
+        accent = accent,
+        onCheckedChange = { on ->
+            val scale = if (on) 1f else 0f
+            val done = dev.metro.launcher.home.MetroSwitches.canSwitchDirectly(context) && runCatching {
+                android.provider.Settings.Global.putFloat(resolver, android.provider.Settings.Global.TRANSITION_ANIMATION_SCALE, scale)
+                android.provider.Settings.Global.putFloat(resolver, android.provider.Settings.Global.WINDOW_ANIMATION_SCALE, scale)
+            }.isSuccess
+            if (done) {
+                resumes++
+            } else {
+                runCatching {
+                    context.startActivity(
+                        android.content.Intent(android.provider.Settings.ACTION_APPLICATION_DEVELOPMENT_SETTINGS)
+                            .addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK),
+                    )
                 }
             }
         },

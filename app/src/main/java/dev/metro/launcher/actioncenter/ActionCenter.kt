@@ -99,9 +99,24 @@ class ActionCenter(private val service: AccessibilityService) {
         applyStripTouch()
     }
 
-    /** Hidden while a full-screen app hides the status bar; always shown over the lock screen. */
+    private val handler = android.os.Handler(android.os.Looper.getMainLooper())
+    private val hideIfStillHidden = Runnable {
+        if (!statusBarVisible && !locked) strip?.visibility = View.INVISIBLE
+        applyStripTouch()
+    }
+
+    /**
+     * Hidden while a full-screen app hides the status bar; always shown over the lock screen.
+     * App switches flip Android's status bar off and on for a moment: the WP bar only hides if it
+     * stays hidden, so Android's bar never gets a chance to show through underneath it.
+     */
     private fun applyStripVisibility() {
-        strip?.visibility = if (statusBarVisible || locked) View.VISIBLE else View.INVISIBLE
+        handler.removeCallbacks(hideIfStillHidden)
+        if (statusBarVisible || locked) {
+            strip?.visibility = View.VISIBLE
+        } else {
+            handler.postDelayed(hideIfStillHidden, 450)
+        }
     }
 
     /** Phone locked (Metro's curtain or Android's keyguard in front). */

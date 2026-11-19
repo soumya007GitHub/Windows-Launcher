@@ -36,6 +36,8 @@ class LockscreenActivity : ComponentActivity() {
     override fun onStart() {
         super.onStart()
         current = this
+        // Tell the Metro service directly (window events can arrive late): transparent status bar now.
+        dev.metro.launcher.volume.MetroAccessibilityService.curtainShown()
     }
     private var keyguardLocked by mutableStateOf(false)
 

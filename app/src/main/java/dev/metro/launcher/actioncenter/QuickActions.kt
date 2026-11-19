@@ -258,10 +258,20 @@ class QuickActions(private val context: Context, private val service: Accessibil
     fun canReadBluetooth(): Boolean = Build.VERSION.SDK_INT < Build.VERSION_CODES.S ||
         context.checkSelfPermission(Manifest.permission.BLUETOOTH_CONNECT) == PackageManager.PERMISSION_GRANTED
 
-    private fun wifiConnected(): Boolean = runCatching {
-        val cm = context.getSystemService(ConnectivityManager::class.java)
-        cm.allNetworks.any { cm.getNetworkCapabilities(it)?.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) == true }
-    }.getOrDefault(false)
+    private fun wifiConnected(): Boolean {
+        val viaConnectivity = runCatching {
+            val cm = context.getSystemService(ConnectivityManager::class.java)
+            @Suppress("DEPRECATION")
+            cm.allNetworks.any { cm.getNetworkCapabilities(it)?.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) == true }
+        }.getOrDefault(false)
+        if (viaConnectivity) return true
+        // Fallback: Wi-Fi reports an associated network even when its name is hidden (location off).
+        return runCatching {
+            @Suppress("DEPRECATION")
+            val info = context.getSystemService(WifiManager::class.java).connectionInfo
+            info != null && info.networkId != -1 && info.supplicantState == android.net.wifi.SupplicantState.COMPLETED
+        }.getOrDefault(false)
+    }
 
     /** Connected Wi-Fi network name; Android only gives it with location permission and location on. */
     fun wifiName(): String? = runCatching {

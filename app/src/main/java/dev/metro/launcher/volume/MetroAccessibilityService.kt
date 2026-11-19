@@ -170,6 +170,13 @@ class MetroAccessibilityService : AccessibilityService() {
         @Volatile
         private var running: MetroAccessibilityService? = null
 
+        /** Called by the lock curtain as soon as it shows, so the status bar turns transparent at once. */
+        fun curtainShown() {
+            val service = running ?: return
+            service.curtainInFront = true
+            service.refreshNavBar()
+        }
+
         /** Called by the lock curtain the moment it is lifted, so the bar reappears without a gap. */
         fun curtainClosed() {
             val service = running ?: return

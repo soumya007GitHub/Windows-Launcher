@@ -80,6 +80,7 @@ the WP8.1 volume panel, and the search / start / back bar on every screen.
 - **On/off switches** for the Metro home screen, keyboard, Metro bar and volume panel. Switching the home screen off returns you to Android's launcher and turns Metro's features off; switching it on brings them back.
 - **Updates**: *Settings → about → check for updates* finds the newest release on GitHub, downloads it and installs it, with the Windows Phone loading dots while it works.
 - Launcher screens stay in **portrait**, even with auto-rotate on.
+- **Android app-switch animations** switch: turn off Android's open / close / switch animation so apps appear instantly.
 
 ## Requirements
 
@@ -109,6 +110,7 @@ All of these are optional and can be granted from **Settings → system** inside
 | Metro keyboard *(optional)* | Typing with the Windows Phone style keyboard |
 | Internet and *install unknown apps* | Checking for, downloading and installing updates from GitHub |
 | Modify system settings *(optional)* | Brightness slider, auto brightness and rotation lock in the Action Center |
+| View network connections | Showing whether Wi-Fi is connected on the Action Center tile |
 | Location and nearby devices *(optional)* | Showing your Wi-Fi network and Bluetooth device names on the Action Center tiles |
 | `WRITE_SECURE_SETTINGS` *(adb, optional)* | Turning the accessibility service back on if the system switches it off, and the one-tap on/off switches |
 
