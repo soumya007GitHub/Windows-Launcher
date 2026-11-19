@@ -6,6 +6,8 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.activity.enableEdgeToEdge
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
@@ -48,7 +50,16 @@ class MainActivity : ComponentActivity() {
             }
         }
         handleMetroAction(intent)
-        setContent { MetroLauncherApp(homeIntents) }
+        setContent {
+            // First run after install: splash + one-by-one permission setup over the launcher.
+            var onboarding by androidx.compose.runtime.remember {
+                androidx.compose.runtime.mutableStateOf(!dev.metro.launcher.onboarding.Onboarding.isDone(this))
+            }
+            androidx.compose.foundation.layout.Box {
+                MetroLauncherApp(homeIntents)
+                if (onboarding) dev.metro.launcher.onboarding.OnboardingFlow(onFinished = { onboarding = false })
+            }
+        }
     }
 
     override fun onResume() {

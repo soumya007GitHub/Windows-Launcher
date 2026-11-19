@@ -128,6 +128,15 @@ Get the latest **[MetroLauncher.apk](https://github.com/soumya007GitHub/Windows-
 
 From version 1.2.0, Metro can update itself: open **Settings → about** and tap **check for updates**.
 
+### First-run setup
+
+The first time Metro opens, it shows a Windows logo while it gets ready, then walks you through each
+permission on its own Windows Phone style screen, with **skip** and **permit**: home screen, the Metro
+service (status bar, navigation bar, Action Center, volume panel), notifications, lock screen, recent
+apps, brightness, quiet hours and network names. Anything already allowed is skipped, and nothing is
+switched on without your OK. On Android 13 and newer, the Metro service screen also explains how to
+unlock "restricted settings" for apps installed outside the Play Store.
+
 ## Build and install
 
 ```bash
