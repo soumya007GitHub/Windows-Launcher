@@ -29,7 +29,7 @@ data class LauncherSettings(
     /** 4 = classic, 6 = WP8 GDR3 "show more tiles". */
     val columns: Int = 4,
     /** Tiles become windows onto a static background photo. */
-    val wallpaperCutout: Boolean = false,
+    val wallpaperCutout: Boolean = true, // new installs start with transparent tiles over a built-in wallpaper
     val hideSystemNavigation: Boolean = true,
     /** WP8 curtain lockscreen (off until the user turns it on). */
     val lockscreenEnabled: Boolean = false,
@@ -148,6 +148,30 @@ class LauncherStore private constructor(context: Context) {
         importPhoto(uri, maxWidth, maxHeight, wallpaperFile).also { if (it) _wallpaperVersion.value = System.currentTimeMillis() }
 
     suspend fun loadWallpaper(): ImageBitmap? = loadPhoto(wallpaperFile)
+
+    fun hasWallpaper(): Boolean = wallpaperFile.exists()
+
+    /** Uses one of Metro's built-in wallpapers (an asset path) as the home screen photo, or the lock screen photo. */
+    suspend fun useBuiltInWallpaper(assetPath: String, forLock: Boolean): Boolean = withContext(Dispatchers.IO) {
+        val target = if (forLock) lockWallpaperFile else wallpaperFile
+        val tmp = File(appContext.filesDir, target.name + ".tmp")
+        val ok = runCatching {
+            appContext.assets.open(assetPath).use { input -> tmp.outputStream().use { input.copyTo(it) } }
+            if (!tmp.renameTo(target)) {
+                tmp.copyTo(target, overwrite = true)
+                tmp.delete()
+            }
+            true
+        }.getOrElse {
+            tmp.delete()
+            false
+        }
+        if (ok) {
+            if (forLock) _lockWallpaperVersion.value = System.currentTimeMillis()
+            else _wallpaperVersion.value = System.currentTimeMillis()
+        }
+        ok
+    }
 
     private val lockWallpaperFile = File(appContext.filesDir, LOCK_WALLPAPER_FILE)
     private val _lockWallpaperVersion =

@@ -42,7 +42,8 @@ the WP8.1 volume panel, and the search / start / back bar on every screen.
 - **Tile tilt**: tiles press in toward the point you touch, like on Windows Phone.
 - **Live tile flip**: tiles show notification counts and previews and flip between faces.
 - **Edit mode**: long-press a tile to drag it, resize it, unpin it or change its icon.
-- **Transparent tiles**: each tile shows its part of a photo you choose, so the whole Start screen looks like one picture.
+- **Transparent tiles** (on by default): each tile shows its part of the wallpaper, so the whole Start screen looks like one picture.
+- **26 built-in wallpapers**: a random one is applied on first install. Pick another from the gallery in settings, or use any photo from your phone.
 - **Arrange my Start**: builds a tidy layout from the apps you use most.
 - **Icons**: white Metro glyphs taken from each app's monochrome icon, full-size artwork for apps without one, any installed icon pack, or a custom image for each tile.
 
@@ -50,18 +51,28 @@ the WP8.1 volume panel, and the search / start / back bar on every screen.
 - **Turnstile transitions** between Start, the app list and settings.
 - **All apps** is one swipe to the right, with letter groups and a context menu that flips in.
 - **Search / Start / Back bar** on every screen, including inside other apps (uses the accessibility service).
-- **Recents**: hold Back to see recently used apps as cards. Swipe a card up to close it, or tap **close all**.
+- **Recents**: hold Back to see your recent apps as cards, in the same order as Android's own Recents. Swipe a card up to close it, or tap **close all**.
+- **Instant lock tile**: pin the phone's one-tap lock app and tapping it turns the screen off immediately.
 
 ### Lock screen
 - **Curtain lock screen**: pull it up to unlock. It follows your finger, falls back with gravity and bounces.
-- **Separate lock screen photo**, or the same photo as the Start screen.
+- **Separate lock screen photo**: one of the built-in wallpapers, any photo from your phone, or the same photo as the Start screen.
+- **Metro notification icons**: each app with notifications shows its white glyph and a count.
 - **Lock and unlock sounds**: built-in sounds or your own audio files, loaded in advance so they play instantly.
 - **Swipe-up gate**: on a phone with no PIN, nothing can be used until the curtain is lifted.
+
+### Keyboard
+- **Metro keyboard**: a Windows Phone style keyboard with flat keys that light up in your accent colour.
+- Letters with auto-capitals and caps lock, two pages of symbols, and **emoji** in 8 categories plus recently used.
+- The Enter key changes to *go*, *search*, *send*, *next* or *done* to suit the text field; hold space to switch keyboards.
 
 ### System
 - **WP8.1 volume panel**: Ringer, Notifications and Media sliders, silent-mode toggle and a link to sound settings.
 - **Themes**: dark, light or *same as phone*, with 20 Windows Phone accent colours.
 - **Pivot settings**: theme, start, sounds, system and about pages, with list pickers.
+- **On/off switches** for the Metro home screen, keyboard, Metro bar and volume panel. Switching the home screen off returns you to Android's launcher and turns Metro's features off; switching it on brings them back.
+- **Updates**: *Settings → about → check for updates* finds the newest release on GitHub, downloads it and installs it, with the Windows Phone loading dots while it works.
+- Launcher screens stay in **portrait**, even with auto-rotate on.
 
 ## Requirements
 
@@ -88,7 +99,9 @@ All of these are optional and can be granted from **Settings → system** inside
 | Usage access | The recent apps switcher |
 | Display over other apps | The curtain lock screen |
 | Accessibility service ("Metro") | The nav bar inside other apps, and the volume panel |
-| `WRITE_SECURE_SETTINGS` *(adb, optional)* | Turning the accessibility service back on if the system switches it off |
+| Metro keyboard *(optional)* | Typing with the Windows Phone style keyboard |
+| Internet and *install unknown apps* | Checking for, downloading and installing updates from GitHub |
+| `WRITE_SECURE_SETTINGS` *(adb, optional)* | Turning the accessibility service back on if the system switches it off, and the one-tap on/off switches |
 
 > **Note for Vivo / OriginOS, MIUI, ColorOS and similar systems:** these systems often switch off
 > accessibility services and stop background apps. Allow Metro to run in the background, and
@@ -101,6 +114,8 @@ All of these are optional and can be granted from **Settings → system** inside
 ## Download
 
 Get the latest **[MetroLauncher.apk](https://github.com/soumya007GitHub/Windows-Launcher/releases/latest/download/MetroLauncher.apk)** from the [Releases](https://github.com/soumya007GitHub/Windows-Launcher/releases) page. Open it on your phone, allow *install unknown apps* when asked, then press **Home** and choose **Metro**.
+
+From version 1.2.0, Metro can update itself: open **Settings → about** and tap **check for updates**.
 
 ## Build and install
 
@@ -128,19 +143,25 @@ app/src/main/java/dev/metro/launcher/
 ├── start/          Start grid, tile faces, edit mode, icon picker, "arrange my Start"
 ├── allapps/        App list with letter groups and the animated context menu
 ├── lock/           Curtain lock screen, lock service, swipe-up gate
-├── recents/        Recent apps switcher (based on usage stats)
+├── recents/        Recent apps switcher (Android's order of opened apps, via usage access)
 ├── volume/         Accessibility service, WP8.1 volume panel, service keeper
 ├── nav/            Search / Start / Back bar (inside the launcher and over other apps)
 ├── notifications/  NotificationListenerService that feeds the live tiles
-├── settings/       Pivot settings pages
+├── settings/       Pivot settings pages and the update section
+├── keyboard/       Metro keyboard (input method service, letters, symbols, emoji)
+├── update/         Update check, download and install from GitHub Releases
+├── wallpapers/     Built-in wallpapers and the gallery strip
+├── home/           Home role, on/off switches
 ├── sound/          Lock / unlock sounds (decoded once, played instantly)
 ├── apps/           App list, Metro glyphs, icon artwork, icon packs
+
 ├── data/           Saved settings, tile layout and photos
 └── ui/             Theme (dark / light / system), accent colours, shared controls
 ```
 
 **Tech:** Kotlin 2.1 · Jetpack Compose (foundation only, no Material) · AGP 8.9 · Gradle 8.13 ·
-coroutines · `LauncherApps` · `AccessibilityService` · `NotificationListenerService` · `UsageStatsManager`.
+coroutines · `LauncherApps` · `AccessibilityService` · `NotificationListenerService` · `UsageStatsManager` ·
+`InputMethodService` · `PackageInstaller`.
 
 ## Author
 

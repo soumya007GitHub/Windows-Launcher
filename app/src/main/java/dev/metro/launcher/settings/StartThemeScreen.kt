@@ -295,7 +295,9 @@ private fun StartPage(
         onCheckedChange = { if (hasBackgroundPhoto) onCutout(it) else onPickPhoto() },
         modifier = Modifier.turnstileItem(turnstile),
     )
-    LinkRow("choose home screen photo", accent, Modifier.turnstileItem(turnstile), onPickPhoto)
+    BasicText("Home screen photo", style = MetroType.Subtle, modifier = Modifier.padding(top = 8.dp).turnstileItem(turnstile))
+    dev.metro.launcher.wallpapers.WallpaperStrip(accent, forLock = false, modifier = Modifier.turnstileItem(turnstile))
+    LinkRow("choose from your photos", accent, Modifier.turnstileItem(turnstile), onPickPhoto)
     Spacer(Modifier.height(8.dp))
     LinkRow("arrange my Start for me", accent, Modifier.turnstileItem(turnstile), onArrangeStart)
     BasicText(
@@ -351,7 +353,8 @@ private fun SoundsPage(
         style = MetroType.Medium,
         modifier = Modifier.turnstileItem(turnstile),
     )
-    LinkRow("choose lock screen photo", accent, Modifier.turnstileItem(turnstile), onPickLockPhoto)
+    dev.metro.launcher.wallpapers.WallpaperStrip(accent, forLock = true, modifier = Modifier.turnstileItem(turnstile))
+    LinkRow("choose from your photos", accent, Modifier.turnstileItem(turnstile), onPickLockPhoto)
     if (hasLockPhoto) LinkRow("use home screen photo instead", accent, Modifier.turnstileItem(turnstile), onClearLockPhoto)
     LinkRow("preview lockscreen", accent, Modifier.turnstileItem(turnstile), onPreviewLockscreen)
 }
@@ -460,7 +463,8 @@ private fun AboutPage(accent: Color, turnstile: TurnstileState) {
     }
     BasicText("Metro", style = MetroType.PageTitle.copy(fontSize = 40.sp), modifier = Modifier.turnstileItem(turnstile))
     BasicText("version $version", style = MetroType.Subtle, modifier = Modifier.turnstileItem(turnstile))
-    Spacer(Modifier.height(20.dp))
+    UpdateSection(accent, turnstile)
+    Spacer(Modifier.height(12.dp))
     BasicText(
         "A home screen for Android in the style of Windows Phone 8: live tiles with tilt and flip, " +
             "turnstile transitions, the app list, the curtain lockscreen, the volume panel and the " +

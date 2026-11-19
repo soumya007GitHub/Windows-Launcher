@@ -5,6 +5,9 @@
     <!-- Phase 3 lockscreen curtain: overlay window + the foreground service that hosts the
          dynamically-registered ACTION_SCREEN_OFF receiver (it cannot be manifest-registered). -->
     <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
+    <!-- Settings > about > check for updates: reads the public GitHub release and downloads its APK. -->
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
     <!-- Needed for the volume panel: without it Android ignores volume / un-mute changes on newer versions. -->
     <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
@@ -134,6 +137,11 @@
                 android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
                 android:value="Shows the user-enabled curtain lockscreen when the screen turns off. ACTION_SCREEN_OFF can only be received by a running, dynamically registered receiver." />
         </service>
+
+        <!-- Result of installing a downloaded update. -->
+        <receiver
+            android:name=".update.UpdateInstallReceiver"
+            android:exported="false" />
 
         <receiver
             android:name=".lock.LockscreenBootReceiver"

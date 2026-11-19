@@ -169,10 +169,16 @@ fun MetroLauncherApp(homeIntents: HomeIntents) {
         }
     }
 
-    // First run: seed Start from the phone's default apps.
+    // First run: seed Start from the phone's default apps, and pick a random built-in wallpaper
+    // for the home screen (the lock screen uses the same photo until the user sets its own).
     LaunchedEffect(apps, pinned) {
         val loaded = apps
-        if (pinned == null && !loaded.isNullOrEmpty()) store.setTiles(repo.defaultPins(loaded))
+        if (pinned == null && !loaded.isNullOrEmpty()) {
+            if (!store.hasWallpaper()) {
+                dev.metro.launcher.wallpapers.MetroWallpapers.random(context)?.let { store.useBuiltInWallpaper(it.assetPath, forLock = false) }
+            }
+            store.setTiles(repo.defaultPins(loaded))
+        }
     }
 
     val allApps = apps.orEmpty()
