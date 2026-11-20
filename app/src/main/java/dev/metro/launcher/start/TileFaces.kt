@@ -35,6 +35,7 @@ import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.LayoutCoordinates
 import androidx.compose.ui.layout.onPlaced
 import androidx.compose.ui.layout.positionInWindow
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
 import kotlin.math.max
@@ -72,7 +73,13 @@ class CutoutWallpaper(
     val image: ImageBitmap,
     val scroll: ScrollState,
     val pager: PagerState?,
-)
+) {
+    /**
+     * Bumped every frame while tiles are being moved by hand (edit mode: drag, float, resize
+     * glides), so each transparent tile repaints its slice of the photo where it is right now.
+     */
+    val motion = androidx.compose.runtime.mutableIntStateOf(0)
+}
 
 /** Centre-crops [photo] to exactly [size] (the window), like ContentScale.Crop. */
 fun cropToSize(photo: ImageBitmap, size: IntSize): ImageBitmap {
@@ -98,30 +105,38 @@ fun Modifier.tileSurface(accent: Color, cutout: CutoutWallpaper?): Modifier =
     } else {
         composed {
             val coordinates = remember { arrayOfNulls<LayoutCoordinates>(1) }
-            onPlaced { coordinates[0] = it }.drawBehind {
-                // Reading these subscribes the draw to scrolling and panning.
+            // Where the tile is on screen; reading it in the draw repaints the slice whenever the
+            // tile moves (resize / reorder glides), not only when Start scrolls.
+            val where = remember { androidx.compose.runtime.mutableStateOf(androidx.compose.ui.geometry.Offset.Zero) }
+            onPlaced { coordinates[0] = it }.onGloballyPositioned {
+                coordinates[0] = it
+                where.value = it.positionInWindow()
+            }.drawBehind {
+                // Reading these subscribes the draw to scrolling, panning and the tile's own moves.
                 cutout.scroll.value
                 cutout.pager?.currentPageOffsetFraction
+                where.value
+                cutout.motion.intValue
                 val coords = coordinates[0]?.takeIf { it.isAttached }
                 if (coords != null) {
                     val image = cutout.image
-                    val origin = coords.positionInWindow()
-                    val x = origin.x.roundToInt()
-                    val y = origin.y.roundToInt()
-                    val w = size.width.roundToInt()
-                    val h = size.height.roundToInt()
+                    // The tile's real on-screen rectangle (includes edit-mode shrink and float).
+                    val a = coords.localToWindow(androidx.compose.ui.geometry.Offset.Zero)
+                    val b = coords.localToWindow(androidx.compose.ui.geometry.Offset(size.width, size.height))
+                    val sx = ((b.x - a.x) / size.width).takeIf { it > 0f } ?: 1f
+                    val sy = ((b.y - a.y) / size.height).takeIf { it > 0f } ?: 1f
                     // Only the part of the tile that is inside the window has photo behind it.
-                    val left = max(x, 0)
-                    val top = max(y, 0)
-                    val right = min(x + w, image.width)
-                    val bottom = min(y + h, image.height)
+                    val left = max(a.x, 0f)
+                    val top = max(a.y, 0f)
+                    val right = min(b.x, image.width.toFloat())
+                    val bottom = min(b.y, image.height.toFloat())
                     if (right > left && bottom > top) {
                         drawImage(
                             image = image,
-                            srcOffset = IntOffset(left, top),
-                            srcSize = IntSize(right - left, bottom - top),
-                            dstOffset = IntOffset(left - x, top - y),
-                            dstSize = IntSize(right - left, bottom - top),
+                            srcOffset = IntOffset(left.roundToInt(), top.roundToInt()),
+                            srcSize = IntSize((right - left).roundToInt(), (bottom - top).roundToInt()),
+                            dstOffset = IntOffset(((left - a.x) / sx).roundToInt(), ((top - a.y) / sy).roundToInt()),
+                            dstSize = IntSize(((right - left) / sx).roundToInt(), ((bottom - top) / sy).roundToInt()),
                         )
                     }
                 }
@@ -264,7 +279,16 @@ private fun ArtTile(tile: StartTileModel, count: Int) {
             .background(TileArt.Fallback)
             .clipToBounds(),
     ) {
-        art?.let { Image(it, contentDescription = tile.app.label, modifier = Modifier.fillMaxSize()) }
+        // Crop: while the art for a new tile size is being rendered, the previous picture still
+        // fills the whole tile instead of leaving bare background around it.
+        art?.let {
+            Image(
+                it,
+                contentDescription = tile.app.label,
+                contentScale = androidx.compose.ui.layout.ContentScale.Crop,
+                modifier = Modifier.fillMaxSize(),
+            )
+        }
         if (tile.size != TileSize.Small) {
             BasicText(
                 text = tile.app.label,

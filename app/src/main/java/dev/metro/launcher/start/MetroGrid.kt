@@ -38,9 +38,18 @@ fun <T> MetroGrid(
     modifier: Modifier = Modifier,
     columns: Int = 4,
     gap: Dp = 6.dp,
+    /** Whether a tile glides to a new slot (false for the tile under the finger: it jumps). */
+    animate: (T) -> Boolean = { true },
     tile: @Composable (T) -> Unit,
 ) {
     require(columns >= TileSize.Wide.columns) { "Metro grid needs at least ${TileSize.Wide.columns} columns" }
+    // Each tile's shown position, animated here in the grid's own placement: when the packing
+    // changes (resize, reorder, unpin, 4<->6 columns) tiles glide from where they are, starting the
+    // very frame the new layout is placed, so nothing jumps or flashes.
+    val scope = rememberCoroutineScope()
+    val shown = remember { HashMap<Any, Animatable<IntOffset, AnimationVector2D>>() }
+    val requested = remember { HashMap<Any, IntOffset>() }
+    val currentAnimate by rememberUpdatedState(animate)
     Layout(
         modifier = modifier,
         content = { items.forEach { item -> key(keyOf(item)) { tile(item) } } },
@@ -86,10 +95,24 @@ fun <T> MetroGrid(
         val rows = occupied.size
         val height = if (rows == 0) 0 else rows * cell + (rows - 1) * gapPx
 
+        val live = items.map(keyOf).toSet()
+        shown.keys.retainAll(live)
+        requested.keys.retainAll(live)
         layout(width, height) {
             placeables.forEachIndexed { i, p ->
                 val (r, c) = origins[i]
-                p.place(c * (cell + gapPx), r * (cell + gapPx))
+                val goal = IntOffset(c * (cell + gapPx), r * (cell + gapPx))
+                val k = keyOf(items[i])
+                val anim = shown.getOrPut(k) { Animatable(goal, IntOffset.VectorConverter) }
+                val glide = currentAnimate(items[i])
+                if (requested[k] != goal) {
+                    requested[k] = goal
+                    scope.launch {
+                        if (glide) anim.animateTo(goal, spring(dampingRatio = 0.82f, stiffness = 520f)) else anim.snapTo(goal)
+                    }
+                }
+                // Until the animation starts (next frame) the tile stays where it was shown.
+                p.place(if (glide) anim.value else goal)
             }
         }
     }

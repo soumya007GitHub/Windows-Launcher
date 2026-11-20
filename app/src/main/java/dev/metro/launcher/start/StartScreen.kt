@@ -237,6 +237,18 @@ fun StartScreen(
 
     BackHandler(enabled = edit.editMode) { edit.exit() }
 
+    // Transparent tiles: repaint their photo slices every frame while tiles are moved by hand, and
+    // for a moment after (glides settling), so a dragged or gliding tile never shows a stale or
+    // empty slice.
+    LaunchedEffect(edit.editMode, cutout) {
+        val c = cutout ?: return@LaunchedEffect
+        val until = if (edit.editMode) Long.MAX_VALUE else SystemClock.uptimeMillis() + 900
+        while (isActive && SystemClock.uptimeMillis() < until) {
+            withFrameNanos { }
+            c.motion.intValue++
+        }
+    }
+
     val floatPhase: State<Float>? = if (edit.editMode) {
         rememberInfiniteTransition(label = "edit-float").animateFloat(
             initialValue = 0f,
@@ -281,6 +293,7 @@ fun StartScreen(
                 sizeOf = { it.size },
                 columns = columns,
                 gap = if (columns == 6) 4.dp else 6.dp,
+                animate = { it.key != drag?.key },
                 modifier = Modifier.fillMaxWidth(),
             ) { tile ->
                 val key = tile.key
@@ -412,7 +425,6 @@ private fun StartTileSlot(
     Box(
         Modifier
             .onPlaced(onPlacedSlot)
-            .animatePlacement(enabled = !dragging)
             .zIndex(if (dragging) 1f else 0f)
             .graphicsLayer {
                 val t = if (dragging) dragTranslation() else settleAnim.value

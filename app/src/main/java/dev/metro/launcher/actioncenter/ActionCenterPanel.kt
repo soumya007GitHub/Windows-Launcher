@@ -194,9 +194,9 @@ internal fun ActionCenterPanel(
                     )
                 }
                 LazyColumn(Modifier.fillMaxSize()) {
+                    // One item per app: its name and its notifications move and dismiss together.
                     groups.forEach { (pkg, groupItems) ->
-                        item(key = "h:$pkg") { AppGroupHeader(pkg, groupItems.first(), accent, c, onDismissApp) }
-                        items(groupItems, key = { it.key }) { item -> NotificationRow(item, c, onOpen, onDismiss) }
+                        item(key = "g:$pkg") { AppGroup(pkg, groupItems, accent, c, onOpen, onDismissApp) }
                     }
                 }
             }
@@ -358,8 +358,40 @@ private fun IconText(text: String, ink: Color, noRipple: MutableInteractionSourc
 
 // ------------------------------------------------------------------ notifications
 
+/**
+ * One app's block: its name and all its notifications, a single unit as on Windows Phone. Swiping
+ * anywhere on it slides the whole block right and clears that app's notifications; tapping a
+ * notification opens it.
+ */
 @Composable
-private fun AppGroupHeader(packageName: String, first: ActionCenterItem, accent: Color, c: AcColors, onDismissApp: (String) -> Unit) {
+private fun AppGroup(
+    packageName: String,
+    groupItems: List<ActionCenterItem>,
+    accent: Color,
+    c: AcColors,
+    onOpen: (ActionCenterItem) -> Unit,
+    onDismissApp: (String) -> Unit,
+) {
+    var dx by remember(packageName) { mutableFloatStateOf(0f) }
+    val clearable = groupItems.any { it.clearable }
+    val swipe = rememberDraggableState { delta -> if (clearable) dx = (dx + delta).coerceAtLeast(0f) }
+    Column(
+        Modifier
+            .fillMaxWidth()
+            .graphicsLayer { translationX = dx; alpha = (1f - dx / size.width.coerceAtLeast(1f)).coerceIn(0f, 1f) }
+            .draggable(
+                swipe,
+                Orientation.Horizontal,
+                onDragStopped = { v -> if (dx > 220f || v > 1500f) onDismissApp(packageName) else dx = 0f },
+            ),
+    ) {
+        AppGroupHeader(packageName, groupItems.first(), accent, c)
+        groupItems.forEach { item -> NotificationRow(item, c, onOpen) }
+    }
+}
+
+@Composable
+private fun AppGroupHeader(packageName: String, first: ActionCenterItem, accent: Color, c: AcColors) {
     val context = LocalContext.current
     val label = remember(packageName) {
         runCatching {
@@ -368,14 +400,8 @@ private fun AppGroupHeader(packageName: String, first: ActionCenterItem, accent:
         }.getOrDefault(packageName)
     }
     val glyph = rememberGlyph(first)
-    var dx by remember(packageName) { mutableFloatStateOf(0f) }
-    val swipe = rememberDraggableState { delta -> dx = (dx + delta).coerceAtLeast(0f) }
     Row(
-        Modifier
-            .fillMaxWidth()
-            .graphicsLayer { translationX = dx; alpha = (1f - dx / size.width.coerceAtLeast(1f)).coerceIn(0f, 1f) }
-            .draggable(swipe, Orientation.Horizontal, onDragStopped = { v -> if (dx > 220f || v > 1500f) onDismissApp(packageName) else dx = 0f })
-            .padding(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 6.dp),
+        Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 6.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Box(Modifier.size(32.dp).background(accent), contentAlignment = Alignment.Center) {
@@ -386,12 +412,10 @@ private fun AppGroupHeader(packageName: String, first: ActionCenterItem, accent:
     }
 }
 
-/** Tap to open; swipe right to dismiss (clearable notifications only). */
+/** One notification inside its app's block: tap to open it. */
 @Composable
-private fun NotificationRow(item: ActionCenterItem, c: AcColors, onOpen: (ActionCenterItem) -> Unit, onDismiss: (ActionCenterItem) -> Unit) {
-    var dx by remember(item.key) { mutableFloatStateOf(0f) }
+private fun NotificationRow(item: ActionCenterItem, c: AcColors, onOpen: (ActionCenterItem) -> Unit) {
     val noRipple = remember { MutableInteractionSource() }
-    val swipe = rememberDraggableState { delta -> if (item.clearable) dx = (dx + delta).coerceAtLeast(0f) }
     val context = LocalContext.current
     val time = remember(item.postedAt) {
         SimpleDateFormat(if (DateFormat.is24HourFormat(context)) "H:mm" else "h:mm", Locale.getDefault()).format(Date(item.postedAt))
@@ -399,8 +423,6 @@ private fun NotificationRow(item: ActionCenterItem, c: AcColors, onOpen: (Action
     Row(
         Modifier
             .fillMaxWidth()
-            .graphicsLayer { translationX = dx; alpha = (1f - dx / size.width.coerceAtLeast(1f)).coerceIn(0f, 1f) }
-            .draggable(swipe, Orientation.Horizontal, onDragStopped = { v -> if (dx > 220f || v > 1500f) onDismiss(item) else dx = 0f })
             .clickable(noRipple, indication = null) { onOpen(item) }
             .padding(start = 16.dp, end = 16.dp, top = 5.dp, bottom = 5.dp),
         verticalAlignment = Alignment.Top,
