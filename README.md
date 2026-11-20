@@ -58,7 +58,7 @@ the WP8.1 volume panel, and the search / start / back bar on every screen.
 - **Curtain lock screen**: pull it up to unlock. It follows your finger, falls back with gravity and bounces.
 - **Separate lock screen photo**: one of the built-in wallpapers, any photo from your phone, or the same photo as the Start screen.
 - **Metro notification icons**: each app with notifications shows its white glyph and a count.
-- **Lock and unlock sounds**: the Windows Phone lock and unlock sounds play every time the phone locks and unlocks (or use your own audio files). They're loaded in advance so they play instantly.
+- **Lock and unlock sounds**: the Windows Phone lock and unlock sounds play every time the phone locks and unlocks while it's in ring mode (or use your own audio files). They have their own volume (low / medium / high / max in Settings → sounds), so media, ringer and notification volume don't affect them, and they're loaded in advance so they play instantly.
 - **Swipe-up gate**: on a phone with no PIN, nothing can be used until the curtain is lifted.
 - **Status bar and navigation bar on the lock screen**: the WP status bar sits transparently over the photo (no notification icons), and tapping Start on the bar lifts the curtain.
 

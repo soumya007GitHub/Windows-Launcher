@@ -38,9 +38,10 @@ object MetroSounds {
     private const val SAMPLE_RATE = 44_100
     private const val MAX_CUSTOM_BYTES = 2L * 1024 * 1024
 
-    // Media usage: not muted by vibrate / silent, so the sounds play on every lock and unlock.
+    // The alarm channel: its level is set to Metro's own "lock sound volume" just for the sound
+    // (see [withOwnVolume]), so media, ringer and notification volume don't change how loud it is.
     private val attributes = AudioAttributes.Builder()
-        .setUsage(AudioAttributes.USAGE_MEDIA)
+        .setUsage(AudioAttributes.USAGE_ALARM)
         .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
         .build()
 
@@ -49,14 +50,50 @@ object MetroSounds {
     /** Plays on every lock / unlock while the "Lock & unlock sounds" setting is on. */
     fun play(context: Context, kind: Kind) {
         if (!LauncherStore.get(context).settings.value.lockSounds) return
+        // Only in ring mode: vibrate and silent play nothing.
+        val audio = context.getSystemService(AudioManager::class.java)
+        if (audio.ringerMode != AudioManager.RINGER_MODE_NORMAL) return
         preview(context, kind)
     }
 
-    /** Plays regardless of settings (used by the settings page). */
+    /** Plays regardless of the switch and ringer (the settings page), at Metro's own level. */
     fun preview(context: Context, kind: Kind) {
-        val custom = customFile(context, kind)
-        if (custom.exists()) playCustom(context, kind, custom) else playBundled(context.applicationContext, kind)
+        withOwnVolume(context.applicationContext) {
+            val custom = customFile(context, kind)
+            if (custom.exists()) playCustom(context, kind, custom) else playBundled(context.applicationContext, kind)
+        }
     }
+
+    // ------------------------------------------------------------------ own volume
+
+    private val handler = android.os.Handler(android.os.Looper.getMainLooper())
+    /** The alarm volume to put back, while a lock sound has it raised; null otherwise. */
+    private var savedAlarm: Int? = null
+    private val restoreAlarm = Runnable {
+        val saved = savedAlarm ?: return@Runnable
+        savedAlarm = null
+        runCatching { audioOf?.setStreamVolume(AudioManager.STREAM_ALARM, saved, 0) }
+    }
+    private var audioOf: AudioManager? = null
+
+    /**
+     * Sets the alarm channel to the lock-sound level for just over a second, plays, then puts the
+     * user's alarm volume back. The sounds are well under a second long.
+     */
+    private fun withOwnVolume(context: Context, play: () -> Unit) {
+        val audio = context.getSystemService(AudioManager::class.java)
+        audioOf = audio
+        val level = LauncherStore.get(context).settings.value.lockSoundLevel.coerceIn(0, 100)
+        val max = audio.getStreamMaxVolume(AudioManager.STREAM_ALARM)
+        val target = ((level / 100f) * max).toInt().coerceIn(if (level > 0) 1 else 0, max)
+        handler.removeCallbacks(restoreAlarm)
+        if (savedAlarm == null) savedAlarm = audio.getStreamVolume(AudioManager.STREAM_ALARM)
+        runCatching { audio.setStreamVolume(AudioManager.STREAM_ALARM, target, 0) }
+        play()
+        handler.postDelayed(restoreAlarm, RESTORE_AFTER_MS)
+    }
+
+    private const val RESTORE_AFTER_MS = 1_400L
 
     fun hasCustom(context: Context, kind: Kind): Boolean = customFile(context, kind).exists()
 

@@ -332,10 +332,23 @@ private fun SoundsPage(
 ) {
     MetroToggle(
         title = "Lock & unlock sounds",
-        subtitle = "follows your ringer: silent or vibrate plays nothing",
+        subtitle = "plays in ring mode only; vibrate and silent play nothing",
         checked = settings.lockSounds,
         accent = accent,
         onCheckedChange = onLockSounds,
+        modifier = Modifier.turnstileItem(turnstile),
+    )
+    val ctx = LocalContext.current
+    MetroListPicker(
+        title = "Lock sound volume",
+        options = listOf(25, 50, 75, 100),
+        selected = listOf(25, 50, 75, 100).minByOrNull { kotlin.math.abs(it - settings.lockSoundLevel) } ?: 75,
+        label = { when (it) { 25 -> "low"; 50 -> "medium"; 75 -> "high"; else -> "max" } },
+        accent = accent,
+        onSelect = { level ->
+            dev.metro.launcher.data.LauncherStore.get(ctx).updateSettings { it.copy(lockSoundLevel = level) }
+            onPreviewLockSound()
+        },
         modifier = Modifier.turnstileItem(turnstile),
     )
     LinkRow("play lock sound", accent, Modifier.turnstileItem(turnstile), onPreviewLockSound)

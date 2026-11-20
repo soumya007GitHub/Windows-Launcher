@@ -43,6 +43,8 @@ data class LauncherSettings(
     val volumePanel: Boolean = true,
     /** Lock / unlock sound effects. */
     val lockSounds: Boolean = true,
+    /** Their own loudness, 0..100 %, independent of media / ringer / notification volume. */
+    val lockSoundLevel: Int = 75,
     /** WP8.1 Action Center: swipe down from the top edge (needs the Metro accessibility service). */
     val actionCenter: Boolean = true,
     /** Windows Phone system tray drawn over Android's status bar in every app. */
@@ -143,6 +145,7 @@ class LauncherStore private constructor(context: Context) {
             putBoolean(KEY_GLOBAL_NAV, next.globalNavBar)
             putBoolean(KEY_VOLUME_PANEL, next.volumePanel)
             putBoolean(KEY_LOCK_SOUNDS, next.lockSounds)
+            putInt(KEY_LOCK_SOUND_LEVEL, next.lockSoundLevel)
             putBoolean(KEY_ACTION_CENTER, next.actionCenter)
             putBoolean(KEY_WP_STATUS_BAR, next.wpStatusBar)
             putString(KEY_THEME, next.theme.name)
@@ -277,6 +280,7 @@ class LauncherStore private constructor(context: Context) {
             globalNavBar = prefs.getBoolean(KEY_GLOBAL_NAV, defaults.globalNavBar),
             volumePanel = prefs.getBoolean(KEY_VOLUME_PANEL, defaults.volumePanel),
             lockSounds = prefs.getBoolean(KEY_LOCK_SOUNDS, defaults.lockSounds),
+            lockSoundLevel = prefs.getInt(KEY_LOCK_SOUND_LEVEL, defaults.lockSoundLevel).coerceIn(0, 100),
             actionCenter = prefs.getBoolean(KEY_ACTION_CENTER, defaults.actionCenter),
             wpStatusBar = prefs.getBoolean(KEY_WP_STATUS_BAR, defaults.wpStatusBar),
             theme = prefs.getString(KEY_THEME, null)?.let { name -> MetroThemeMode.entries.firstOrNull { it.name == name } } ?: defaults.theme,
@@ -296,6 +300,7 @@ class LauncherStore private constructor(context: Context) {
         private const val KEY_GLOBAL_NAV = "global_nav_bar"
         private const val KEY_VOLUME_PANEL = "volume_panel"
         private const val KEY_LOCK_SOUNDS = "lock_sounds"
+        private const val KEY_LOCK_SOUND_LEVEL = "lock_sound_level"
         private const val KEY_ACTION_CENTER = "action_center"
         private const val KEY_WP_STATUS_BAR = "wp_status_bar"
         private const val KEY_THEME = "theme"
