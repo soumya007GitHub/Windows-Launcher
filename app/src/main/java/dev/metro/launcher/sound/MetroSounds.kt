@@ -23,36 +23,39 @@ import kotlin.math.sin
 import kotlin.math.tanh
 
 /**
- * Lock / unlock sound effects. The built-in ones are synthesised here (original sounds in the
- * spirit of WP8: a soft low "thock" for lock, a light double "tick" for unlock). The user can
- * replace either with their own audio file. Sounds follow the ringer: silent or vibrate = no sound.
+ * Lock / unlock sound effects. The built-in ones are the Windows Phone lock and unlock sounds
+ * bundled with the app (res/raw), so they are there on every install. The user can replace either
+ * with their own audio file. They play on every lock and unlock while "Lock & unlock sounds" is on,
+ * whatever the ringer mode, at the media volume.
  */
 object MetroSounds {
 
-    enum class Kind(val fileName: String) { Lock("sound_lock.audio"), Unlock("sound_unlock.audio") }
+    enum class Kind(val fileName: String, val raw: Int) {
+        Lock("sound_lock.audio", dev.metro.launcher.R.raw.wp_lock),
+        Unlock("sound_unlock.audio", dev.metro.launcher.R.raw.wp_unlock),
+    }
 
     private const val SAMPLE_RATE = 44_100
     private const val MAX_CUSTOM_BYTES = 2L * 1024 * 1024
 
+    // Media usage: not muted by vibrate / silent, so the sounds play on every lock and unlock.
     private val attributes = AudioAttributes.Builder()
-        .setUsage(AudioAttributes.USAGE_ASSISTANCE_SONIFICATION)
+        .setUsage(AudioAttributes.USAGE_MEDIA)
         .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
         .build()
 
     private val tracks = HashMap<Kind, AudioTrack>()
 
-    /** Plays only if the setting is on and the ringer is in normal mode. */
+    /** Plays on every lock / unlock while the "Lock & unlock sounds" setting is on. */
     fun play(context: Context, kind: Kind) {
         if (!LauncherStore.get(context).settings.value.lockSounds) return
-        val audio = context.getSystemService(AudioManager::class.java)
-        if (audio.ringerMode != AudioManager.RINGER_MODE_NORMAL) return
         preview(context, kind)
     }
 
     /** Plays regardless of settings (used by the settings page). */
     fun preview(context: Context, kind: Kind) {
         val custom = customFile(context, kind)
-        if (custom.exists()) playCustom(context, kind, custom) else playBuiltIn(kind)
+        if (custom.exists()) playCustom(context, kind, custom) else playBundled(context.applicationContext, kind)
     }
 
     fun hasCustom(context: Context, kind: Kind): Boolean = customFile(context, kind).exists()
@@ -106,9 +109,56 @@ object MetroSounds {
     private val customTracks = HashMap<Kind, Decoded>()
     private val decoding = HashSet<Kind>()
 
-    /** Decodes custom sounds ahead of time on a background thread (lock service / curtain start). */
+    /** Decodes the sounds ahead of time on a background thread (lock service / curtain start). */
     fun preload(context: Context) {
         Kind.entries.forEach { ensureDecoded(context.applicationContext, it) }
+        Kind.entries.forEach { ensureBundled(context.applicationContext, it) }
+    }
+
+    // ------------------------------------------------------------------ bundled WP sounds
+
+    private val bundledTracks = HashMap<Kind, AudioTrack>()
+    private val bundledDecoding = HashSet<Kind>()
+
+    private fun ensureBundled(context: Context, kind: Kind) {
+        synchronized(this) {
+            if (bundledTracks.containsKey(kind) || !bundledDecoding.add(kind)) return
+        }
+        Thread {
+            val track = runCatching {
+                context.resources.openRawResourceFd(kind.raw).use { fd ->
+                    decodeToTrack { it.setDataSource(fd.fileDescriptor, fd.startOffset, fd.length) }
+                }
+            }.getOrNull()
+            synchronized(this) {
+                bundledDecoding -= kind
+                if (track != null) bundledTracks[kind] = track
+            }
+        }.apply { isDaemon = true; name = "MetroSounds-bundled" }.start()
+    }
+
+    private fun playBundled(context: Context, kind: Kind) {
+        val track = synchronized(this) { bundledTracks[kind] }
+        if (track != null) {
+            runCatching {
+                if (track.playState == AudioTrack.PLAYSTATE_PLAYING) track.stop()
+                track.reloadStaticData()
+                track.play()
+            }
+            return
+        }
+        ensureBundled(context, kind)
+        // First play before decoding finished: play the file directly once.
+        runCatching {
+            MediaPlayer().apply {
+                setAudioAttributes(attributes)
+                context.resources.openRawResourceFd(kind.raw).use { fd -> setDataSource(fd.fileDescriptor, fd.startOffset, fd.length) }
+                setOnCompletionListener { it.release() }
+                setOnErrorListener { mp, _, _ -> mp.release(); true }
+                setOnPreparedListener { it.start() }
+                prepareAsync()
+            }
+        }
     }
 
     private fun readyTrack(context: Context, kind: Kind): AudioTrack? = synchronized(this) {
@@ -124,7 +174,7 @@ object MetroSounds {
             if (customTracks[kind]?.stamp == stamp || !decoding.add(kind)) return
         }
         Thread {
-            val track = runCatching { decodeToTrack(file) }.getOrNull()
+            val track = runCatching { decodeToTrack { it.setDataSource(file.absolutePath) } }.getOrNull()
             synchronized(this) {
                 decoding -= kind
                 if (track != null) customTracks.put(kind, Decoded(stamp, track))?.track?.release()
@@ -157,10 +207,10 @@ object MetroSounds {
     }
 
     /** Decodes the first audio track of [file] to 16-bit PCM, boosts it and wraps it in a static AudioTrack. */
-    private fun decodeToTrack(file: File): AudioTrack {
+    private fun decodeToTrack(source: (MediaExtractor) -> Unit): AudioTrack {
         val extractor = MediaExtractor()
         try {
-            extractor.setDataSource(file.absolutePath)
+            source(extractor)
             val index = (0 until extractor.trackCount).first {
                 extractor.getTrackFormat(it).getString(MediaFormat.KEY_MIME)?.startsWith("audio/") == true
             }

@@ -63,8 +63,35 @@ class MetroAccessibilityService : AccessibilityService() {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
     private var actionCenter: dev.metro.launcher.actioncenter.ActionCenter? = null
 
+    /** Lock / unlock sounds when Metro's curtain isn't the one handling them. */
+    private val lockSoundReceiver = object : android.content.BroadcastReceiver() {
+        override fun onReceive(context: Context, intent: android.content.Intent) {
+            val s = LauncherStore.get(context).settings.value
+            val curtainHandles = s.lockscreenEnabled && Settings.canDrawOverlays(context)
+            if (curtainHandles) return
+            when (intent.action) {
+                android.content.Intent.ACTION_SCREEN_OFF ->
+                    if (!dev.metro.launcher.lock.LockGate.isCallActive(context)) {
+                        dev.metro.launcher.sound.MetroSounds.play(context, dev.metro.launcher.sound.MetroSounds.Kind.Lock)
+                    }
+                android.content.Intent.ACTION_USER_PRESENT ->
+                    dev.metro.launcher.sound.MetroSounds.play(context, dev.metro.launcher.sound.MetroSounds.Kind.Unlock)
+            }
+        }
+    }
+
     override fun onServiceConnected() {
         running = this
+        dev.metro.launcher.sound.MetroSounds.preload(this)
+        androidx.core.content.ContextCompat.registerReceiver(
+            this,
+            lockSoundReceiver,
+            android.content.IntentFilter().apply {
+                addAction(android.content.Intent.ACTION_SCREEN_OFF)
+                addAction(android.content.Intent.ACTION_USER_PRESENT)
+            },
+            androidx.core.content.ContextCompat.RECEIVER_EXPORTED,
+        )
         volume = VolumeOverlay(this) { foregroundPackage }
         navBar = GlobalNavBar(this)
         actionCenter = dev.metro.launcher.actioncenter.ActionCenter(this)
@@ -154,6 +181,7 @@ class MetroAccessibilityService : AccessibilityService() {
 
     override fun onDestroy() {
         if (running === this) running = null
+        runCatching { unregisterReceiver(lockSoundReceiver) }
         scope.cancel()
         volume?.release()
         navBar?.release()

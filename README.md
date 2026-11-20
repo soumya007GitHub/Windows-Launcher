@@ -58,7 +58,7 @@ the WP8.1 volume panel, and the search / start / back bar on every screen.
 - **Curtain lock screen**: pull it up to unlock. It follows your finger, falls back with gravity and bounces.
 - **Separate lock screen photo**: one of the built-in wallpapers, any photo from your phone, or the same photo as the Start screen.
 - **Metro notification icons**: each app with notifications shows its white glyph and a count.
-- **Lock and unlock sounds**: built-in sounds or your own audio files, loaded in advance so they play instantly.
+- **Lock and unlock sounds**: the Windows Phone lock and unlock sounds play every time the phone locks and unlocks (or use your own audio files). They're loaded in advance so they play instantly.
 - **Swipe-up gate**: on a phone with no PIN, nothing can be used until the curtain is lifted.
 - **Status bar and navigation bar on the lock screen**: the WP status bar sits transparently over the photo (no notification icons), and tapping Start on the bar lifts the curtain.
 
@@ -191,6 +191,6 @@ Created by **[soumya007github](https://github.com/soumya007github)**.
 ## Disclaimer
 
 This is an independent fan project. It is not affiliated with or endorsed by Microsoft.
-Windows and Windows Phone are trademarks of Microsoft Corporation. No Microsoft code, icons or
-sounds are included in this repository. Lock and unlock sounds are synthesised by the app or
-supplied by the user.
+Windows and Windows Phone are trademarks of Microsoft Corporation. No Microsoft code is included
+in this repository. The bundled lock and unlock sounds are the original Windows Phone sounds, and the
+built-in wallpapers are Nokia Lumia stock wallpapers; they belong to their respective owners.
